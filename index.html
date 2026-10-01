@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="ฝึกสอบเข้า ม.1 สวนกุหลาบวิทยาลัย — คณิตศาสตร์และภาษาอังกฤษ" />
+  <title>เตรียมสอบเข้า ม.1 สวนกุหลาบ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- HOME -->
+  <div id="screen-home" class="app-shell">
+    <header class="hero">
+      <div class="badge">สวนกุหลาบวิทยาลัย · ฝึกสอบ ม.1</div>
+      <h1>เตรียมสอบเข้า ม.1 สวนกุหลาบ</h1>
+      <p class="subtitle">ฝึกคณิตศาสตร์และภาษาอังกฤษสไตล์ข้อสอบเข้า — สำหรับนักเรียน ป.6</p>
+      <p class="hint">เลือกโหมดด้านล่าง · กด 1–4 เพื่อเลือกคำตอบเมื่ออยู่ในข้อสอบ</p>
+    </header>
+
+    <div class="mode-grid" role="list">
+      <button type="button" class="mode-card" data-mode="math" role="listitem">
+        <div class="icon">ค</div>
+        <h2>คณิตศาสตร์</h2>
+        <p>โจทย์หลายขั้นตอน จำนวน เศษส่วน อัตราส่วน สมการ เรขาคณิต สถิติ</p>
+        <div class="meta">30 ข้อ · 40 นาที</div>
+      </button>
+      <button type="button" class="mode-card" data-mode="english" role="listitem">
+        <div class="icon">E</div>
+        <h2>ภาษาอังกฤษ</h2>
+        <p>Grammar, Vocabulary, Conversation และ Reading สั้น ๆ</p>
+        <div class="meta">30 ข้อ · 35 นาที</div>
+      </button>
+      <button type="button" class="mode-card" data-mode="combined" role="listitem">
+        <div class="icon">Σ</div>
+        <h2>สอบรวม</h2>
+        <p>คณิตฯ แล้วตามด้วยอังกฤษ — จำลองสนามสอบจริง</p>
+        <div class="meta">60 ข้อ · 75 นาที</div>
+      </button>
+      <button type="button" class="mode-card" data-mode="practice" role="listitem" id="btn-show-practice">
+        <div class="icon">ฝึก</div>
+        <h2>ฝึกทีละบท</h2>
+        <p>เลือกหัวข้อที่ต้องการทบทวน ไม่บังคับจับเวลา</p>
+        <div class="meta">ไม่จำกัดจำนวน · ตัวจับเวลาแบบเลือกได้</div>
+      </button>
+    </div>
+
+    <section id="practice-panel" class="panel hidden" aria-label="ฝึกทีละบท">
+      <h3>เลือกวิชาและหัวข้อ</h3>
+      <div class="topic-row" id="subject-chips">
+        <button type="button" class="chip active" data-subject="math">คณิตศาสตร์</button>
+        <button type="button" class="chip" data-subject="english">ภาษาอังกฤษ</button>
+      </div>
+      <div class="topic-row" id="topic-chips" aria-label="หัวข้อ"></div>
+      <div class="soft-timer">
+        <label><input type="checkbox" id="practice-timer-on" /> ใช้ตัวจับเวลาแบบอ่อน (นาทีละข้อประมาณ 1.2)</label>
+      </div>
+      <button type="button" class="btn btn-primary" id="btn-start-practice">เริ่มฝึก</button>
+    </section>
+
+    <section class="history panel" aria-label="ประวัติคะแนน">
+      <h3>ประวัติคะแนนล่าสุด</h3>
+      <p id="history-empty" class="history-empty">ยังไม่มีประวัติ — ลองทำข้อสอบสักรอบสิ</p>
+      <ul id="history-list" class="history-list hidden"></ul>
+    </section>
+
+    <p class="footer-note">ข้อสอบฝึกหัดต้นฉบับ · ไม่คัดลอกจากข้อสอบจริง · สำหรับเตรียมความพร้อมเท่านั้น</p>
+  </div>
+
+  <!-- EXAM -->
+  <div id="screen-exam" class="hidden">
+    <div class="exam-bar" role="banner">
+      <div class="left">
+        <span class="subject-label" id="exam-subject">คณิตศาสตร์</span>
+        <span class="progress-text" id="exam-progress">ข้อ 1 / 30</span>
+      </div>
+      <div class="right">
+        <button type="button" class="btn btn-ghost btn-sm hidden" id="btn-pause">พักชั่วคราว</button>
+        <div class="timer" id="exam-timer" aria-live="polite">40:00</div>
+        <button type="button" class="btn btn-outline" id="btn-quit-exam">ออก</button>
+      </div>
+    </div>
+
+    <div class="exam-body">
+      <article class="q-card" id="question-card">
+        <div class="q-meta">
+          <span class="tag" id="q-topic"></span>
+          <span class="tag" id="q-diff"></span>
+        </div>
+        <div id="q-passage" class="passage hidden"></div>
+        <p class="stem" id="q-stem"></p>
+        <div class="choices" id="q-choices" role="listbox" aria-label="ตัวเลือก"></div>
+        <div class="nav-row">
+          <button type="button" class="btn btn-outline" id="btn-prev">← ก่อนหน้า</button>
+          <button type="button" class="btn btn-ghost" id="btn-skip">ข้าม</button>
+          <button type="button" class="btn btn-primary" id="btn-next">ถัดไป →</button>
+        </div>
+      </article>
+      <aside class="nav-grid-wrap" aria-label="แผนผังข้อสอบ">
+        <h4>แผนผังข้อสอบ</h4>
+        <div class="q-grid" id="q-grid"></div>
+        <div class="legend">
+          <span>■ ตอบแล้ว (ชมพู) · □ ยังไม่ตอบ · ขอบเข้ม = ข้อปัจจุบัน</span>
+        </div>
+        <div class="submit-wrap">
+          <button type="button" class="btn btn-primary" id="btn-submit" style="width:100%">ส่งคำตอบ</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="screen-results" class="results hidden">
+    <div class="score-hero">
+      <div class="badge">ผลการสอบ</div>
+      <h2 id="result-title">สรุปคะแนน</h2>
+      <div class="big" id="result-percent">0%</div>
+      <p id="result-summary"></p>
+      <div class="stats">
+        <div class="stat"><div class="label">ถูก</div><div class="value" id="stat-correct">0</div></div>
+        <div class="stat"><div class="label">ผิด</div><div class="value" id="stat-wrong">0</div></div>
+        <div class="stat"><div class="label">ไม่ตอบ</div><div class="value" id="stat-blank">0</div></div>
+        <div class="stat"><div class="label">เวลาที่ใช้</div><div class="value" id="stat-time">0:00</div></div>
+      </div>
+      <div class="nav-row" style="justify-content:center;margin-top:18px">
+        <button type="button" class="btn btn-primary" id="btn-home">กลับหน้าแรก</button>
+        <button type="button" class="btn btn-ghost" id="btn-retry">ทำอีกครั้ง</button>
+      </div>
+    </div>
+    <h3 style="margin:0 0 12px">ตรวจคำตอบทีละข้อ</h3>
+    <div class="review-list" id="review-list"></div>
+  </div>
+
+  <!-- Confirm modal -->
+  <div id="modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal">
+      <h3 id="modal-title">ยืนยันส่งคำตอบ?</h3>
+      <p id="modal-body">ยังมีข้อที่ยังไม่ได้ตอบ คุณต้องการส่งเลยหรือไม่</p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" id="modal-cancel">ยกเลิก</button>
+        <button type="button" class="btn btn-primary" id="modal-confirm">ส่งเลย</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pause overlay -->
+  <div id="pause-overlay" class="modal-backdrop hidden">
+    <div class="modal">
+      <h3>พักชั่วคราว</h3>
+      <p>เวลาระงับไว้แล้ว กดต่อเมื่อพร้อม</p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-primary" id="btn-resume">ทำต่อ</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="data/math.js"></script>
+  <script src="data/english.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
