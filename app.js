@@ -1,4 +1,9 @@
-/* Suankularb M.1 Practice App */
+/* Suankularb M.1 Practice App
+   Each paper is a new random set: questions are drawn across topics,
+   order is shuffled, and choices are reshuffled so students analyze
+   instead of memorizing a letter. History keeps topic results so the
+   home screen can show what to practice next.
+*/
 (function () {
   "use strict";
 
@@ -25,11 +30,15 @@
   };
 
   const HISTORY_KEY = "sk_m1_history_v1";
+  const SEEN_KEY = "sk_m1_seen_v1";
+  const HISTORY_LIMIT = 30;
+  /* Remember about one paper's worth so the next set prefers unseen items. */
+  const SEEN_CAP = 24;
   const LETTERS_TH = ["ก", "ข", "ค", "ง"];
   const LETTERS_EN = ["A", "B", "C", "D"];
   const DIFF_TH = { easy: "ง่าย", medium: "ปานกลาง", hard: "ยาก" };
 
-  /** @type {{mode:string, questions:any[], answers:(number|null)[], index:number, remaining:number|null, totalSeconds:number|null, allowPause:boolean, paused:boolean, timerId:number|null, startedAt:number, practiceSubject?:string, practiceTopic?:string}} */
+  /** @type {{mode:string, label:string, questions:any[], answers:(number|null)[], index:number, remaining:number|null, totalSeconds:number|null, allowPause:boolean, paused:boolean, timerId:number|null, startedAt:number, practiceSubject?:string, practiceTopic?:string}|null} */
   let state = null;
 
   const $ = (sel) => document.querySelector(sel);
@@ -44,18 +53,113 @@
     return a;
   }
 
-  function pickQuestions(pool, n) {
-    if (pool.length <= n) return shuffle(pool);
-    return shuffle(pool).slice(0, n);
+  /* Move the correct choice to a new slot without changing the question text. */
+  function presentQuestion(q) {
+    const order = shuffle(q.choices.map((_, i) => i));
+    return {
+      id: q.id,
+      subject: q.subject,
+      topic: q.topic,
+      difficulty: q.difficulty,
+      stem: q.stem,
+      passage: q.passage,
+      choices: order.map((i) => q.choices[i]),
+      answerIndex: order.indexOf(q.answerIndex),
+      explanation: q.explanation,
+    };
+  }
+
+  function loadSeen(subject) {
+    try {
+      const raw = JSON.parse(localStorage.getItem(SEEN_KEY) || "{}");
+      const list = raw && Array.isArray(raw[subject]) ? raw[subject] : [];
+      return list.filter((id) => typeof id === "string");
+    } catch {
+      return [];
+    }
+  }
+
+  function rememberSeen(questions) {
+    let raw = {};
+    try {
+      raw = JSON.parse(localStorage.getItem(SEEN_KEY) || "{}") || {};
+    } catch {
+      raw = {};
+    }
+    ["math", "english"].forEach((subject) => {
+      const ids = questions.filter((q) => q.subject === subject).map((q) => q.id);
+      if (!ids.length) return;
+      const idSet = new Set(ids);
+      const prev = (Array.isArray(raw[subject]) ? raw[subject] : []).filter((id) => !idSet.has(id));
+      raw[subject] = prev.concat(ids).slice(-SEEN_CAP);
+    });
+    localStorage.setItem(SEEN_KEY, JSON.stringify(raw));
+  }
+
+  function groupByTopic(pool) {
+    const map = new Map();
+    pool.forEach((q) => {
+      if (!map.has(q.topic)) map.set(q.topic, []);
+      map.get(q.topic).push(q);
+    });
+    return Array.from(map.values());
+  }
+
+  /* Spread a paper across topics the way a real exam does, then fill leftovers. */
+  function allocateCounts(groups, n) {
+    const total = groups.reduce((sum, g) => sum + g.length, 0);
+    if (total <= n) return groups.map((g) => g.length);
+    const raw = groups.map((g) => (g.length / total) * n);
+    const counts = raw.map((x, i) => Math.min(groups[i].length, Math.floor(x)));
+    let left = n - counts.reduce((sum, c) => sum + c, 0);
+    const order = raw
+      .map((x, i) => ({ i, frac: x - Math.floor(x) }))
+      .sort((a, b) => b.frac - a.frac);
+    let guard = 0;
+    while (left > 0 && guard < groups.length * 4) {
+      guard += 1;
+      let placed = false;
+      for (const slot of order) {
+        if (left <= 0) break;
+        if (counts[slot.i] < groups[slot.i].length) {
+          counts[slot.i] += 1;
+          left -= 1;
+          placed = true;
+        }
+      }
+      if (!placed) break;
+    }
+    return counts;
+  }
+
+  function takePreferFresh(pool, n, seenSet) {
+    const fresh = shuffle(pool.filter((q) => !seenSet.has(q.id)));
+    const stale = shuffle(pool.filter((q) => seenSet.has(q.id)));
+    return fresh.concat(stale).slice(0, Math.min(n, pool.length));
+  }
+
+  function buildSubjectPaper(pool, n) {
+    if (!pool.length) return [];
+    const subject = pool[0].subject;
+    const seenSet = new Set(loadSeen(subject));
+    const groups = groupByTopic(pool);
+    const counts = allocateCounts(groups, n);
+    const picked = [];
+    groups.forEach((group, i) => {
+      takePreferFresh(group, counts[i], seenSet).forEach((q) => picked.push(q));
+    });
+    return shuffle(picked).map(presentQuestion);
   }
 
   function buildExamSet(mode) {
     const math = window.MATH_QUESTIONS || [];
     const eng = window.ENGLISH_QUESTIONS || [];
-    if (mode === "math") return pickQuestions(math, 30);
-    if (mode === "english") return pickQuestions(eng, 30);
-    // combined: 30 math then 30 english (sectioned)
-    return pickQuestions(math, 30).concat(pickQuestions(eng, 30));
+    if (mode === "math") return buildSubjectPaper(math, MODE_CONFIG.math.count);
+    if (mode === "english") return buildSubjectPaper(eng, MODE_CONFIG.english.count);
+    /* Combined keeps two sections, like the real sitting, but each section is a new paper. */
+    return buildSubjectPaper(math, MODE_CONFIG.math.count).concat(
+      buildSubjectPaper(eng, MODE_CONFIG.english.count)
+    );
   }
 
   function formatTime(sec) {
@@ -75,7 +179,8 @@
   function loadHistory() {
     try {
       const raw = localStorage.getItem(HISTORY_KEY);
-      return raw ? JSON.parse(raw) : [];
+      const list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list : [];
     } catch {
       return [];
     }
@@ -84,7 +189,97 @@
   function saveHistory(entry) {
     const list = loadHistory();
     list.unshift(entry);
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, 10)));
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, HISTORY_LIMIT)));
+  }
+
+  function topicRows(questions, answers) {
+    const map = new Map();
+    questions.forEach((q, i) => {
+      const key = q.subject + "\0" + q.topic;
+      if (!map.has(key)) {
+        map.set(key, {
+          subject: q.subject,
+          topic: q.topic,
+          correct: 0,
+          wrong: 0,
+          blank: 0,
+          total: 0,
+        });
+      }
+      const row = map.get(key);
+      row.total += 1;
+      if (answers[i] == null) row.blank += 1;
+      else if (answers[i] === q.answerIndex) row.correct += 1;
+      else row.wrong += 1;
+    });
+    return Array.from(map.values());
+  }
+
+  function percentOf(row) {
+    return row.total ? Math.round((row.correct / row.total) * 100) : 0;
+  }
+
+  function aggregateTopics(list) {
+    const map = new Map();
+    list.forEach((entry) => {
+      (entry.topics || []).forEach((t) => {
+        const key = t.subject + "\0" + t.topic;
+        if (!map.has(key)) {
+          map.set(key, { subject: t.subject, topic: t.topic, correct: 0, total: 0 });
+        }
+        const row = map.get(key);
+        row.correct += Number(t.correct) || 0;
+        row.total += Number(t.total) || 0;
+      });
+    });
+    return Array.from(map.values())
+      .filter((t) => t.total > 0)
+      .map((t) => ({ ...t, percent: percentOf(t) }))
+      .sort((a, b) => a.percent - b.percent || b.total - a.total);
+  }
+
+  function weakestTopics(rows, limit) {
+    return rows
+      .slice()
+      .sort((a, b) => percentOf(a) - percentOf(b) || b.total - a.total)
+      .slice(0, limit);
+  }
+
+  function subjectPrefix(subject) {
+    return subject === "english" ? "อังกฤษ" : "คณิต";
+  }
+
+  function renderTopicBars(el, rows) {
+    if (!el) return;
+    const ordered = rows.slice().sort((a, b) => percentOf(a) - percentOf(b) || b.total - a.total);
+    el.innerHTML = ordered
+      .map((t) => {
+        const pct = percentOf(t);
+        const level = pct < 50 ? "low" : pct < 75 ? "mid" : "high";
+        const name = subjectPrefix(t.subject) + " · " + t.topic;
+        return `<div class="topic-bar-row">
+          <span class="topic-name">${escapeHtml(name)}</span>
+          <span class="bar-track" aria-hidden="true"><span class="bar-fill ${level}" style="width:${pct}%"></span></span>
+          <span class="topic-pct">${pct}% <span class="topic-frac">${t.correct}/${t.total}</span></span>
+        </div>`;
+      })
+      .join("");
+  }
+
+  function trendText(list) {
+    if (list.length < 2) {
+      return "ชุดแรกเสร็จแล้ว ทำชุดถัดไปได้เลย — ข้อและตัวเลือกจะถูกสุ่มใหม่ เพื่อดูว่าวิเคราะห์ได้ดีขึ้นไหม";
+    }
+    const latest = list[0];
+    const prevSame = list.slice(1).find((h) => h.mode === latest.mode);
+    const prev = prevSame || list[1];
+    const delta = latest.percent - prev.percent;
+    const which = prevSame ? "ครั้งก่อนในโหมดเดียวกัน" : "ชุดก่อนหน้า";
+    if (delta > 0) return "คะแนนล่าสุดสูงกว่า" + which + " " + delta + " จุด — กำลังพัฒนา";
+    if (delta < 0) {
+      return "คะแนนล่าสุดต่ำกว่า" + which + " " + Math.abs(delta) + " จุด — กลับไปฝึกหัวข้อด้านล่างก่อนสอบชุดใหม่";
+    }
+    return "คะแนนล่าสุดเท่ากับ" + which + " — ลองชุดสุ่มชุดใหม่เพื่อยืนยันว่าคิดได้จริง ไม่ใช่จำข้อ";
   }
 
   function renderHistory() {
@@ -94,23 +289,71 @@
     if (!list.length) {
       ul.classList.add("hidden");
       empty.classList.remove("hidden");
+      ul.innerHTML = "";
+    } else {
+      empty.classList.add("hidden");
+      ul.classList.remove("hidden");
+      ul.innerHTML = list
+        .map((h, index) => {
+          const d = new Date(h.at);
+          const dateStr = d.toLocaleString("th-TH", {
+            dateStyle: "medium",
+            timeStyle: "short",
+          });
+          const prevSame = list.slice(index + 1).find((item) => item.mode === h.mode);
+          let deltaHtml = "";
+          if (prevSame && typeof h.percent === "number" && typeof prevSame.percent === "number") {
+            const delta = h.percent - prevSame.percent;
+            if (delta > 0) deltaHtml = `<span class="delta up">+${delta}</span>`;
+            else if (delta < 0) deltaHtml = `<span class="delta down">${delta}</span>`;
+            else deltaHtml = `<span class="delta flat">เท่าเดิม</span>`;
+          }
+          const weak = weakestTopics(h.topics || [], 2).filter((t) => percentOf(t) < 80);
+          const weakHtml = weak.length
+            ? `<span class="weak-inline">ควรทบทวน: ${escapeHtml(weak.map((t) => t.topic).join(", "))}</span>`
+            : "";
+          return `<li>
+            <span>
+              <strong>${escapeHtml(h.label)}</strong>
+              <span class="when">${escapeHtml(dateStr)}</span>
+              ${weakHtml}
+            </span>
+            <span class="score">${h.percent}% · ${h.correct}/${h.total} ${deltaHtml}</span>
+          </li>`;
+        })
+        .join("");
+    }
+    renderInsights(list);
+  }
+
+  function renderInsights(list) {
+    const empty = $("#insight-empty");
+    const body = $("#insight-body");
+    if (!list.length) {
+      empty.classList.remove("hidden");
+      body.classList.add("hidden");
       return;
     }
     empty.classList.add("hidden");
-    ul.classList.remove("hidden");
-    ul.innerHTML = list
-      .map((h) => {
-        const d = new Date(h.at);
-        const dateStr = d.toLocaleString("th-TH", {
-          dateStyle: "medium",
-          timeStyle: "short",
-        });
-        return `<li>
-          <span><strong>${escapeHtml(h.label)}</strong><br/><span style="color:var(--muted);font-size:0.85rem">${escapeHtml(dateStr)}</span></span>
-          <span class="score">${h.percent}% · ${h.correct}/${h.total}</span>
-        </li>`;
-      })
-      .join("");
+    body.classList.remove("hidden");
+    const avg = Math.round(list.reduce((sum, h) => sum + (Number(h.percent) || 0), 0) / list.length);
+    $("#insight-summary").textContent = "ทำไปแล้ว " + list.length + " ชุด · คะแนนเฉลี่ย " + avg + "%";
+    $("#insight-trend").textContent = trendText(list);
+
+    const topics = aggregateTopics(list);
+    const weakBox = $("#weak-list");
+    const drill = $("#btn-practice-weak");
+    if (!topics.length) {
+      weakBox.innerHTML = `<p class="history-empty">ชุดที่บันทึกไว้ก่อนหน้านี้ยังไม่มีคะแนนรายหัวข้อ ทำอีกหนึ่งชุดแล้วจะเห็นว่าควรฝึกบทไหน</p>`;
+      drill.classList.add("hidden");
+      return;
+    }
+    renderTopicBars(weakBox, topics.slice(0, 4));
+    const worst = topics[0];
+    drill.classList.remove("hidden");
+    drill.textContent = "ฝึกหัวข้อที่ควรพัฒนา: " + worst.topic;
+    drill.dataset.subject = worst.subject;
+    drill.dataset.topic = worst.topic;
   }
 
   function escapeHtml(s) {
@@ -124,6 +367,12 @@
   /* ---------- Practice panel ---------- */
   let practiceSubject = "math";
   let practiceTopic = MATH_TOPICS[0];
+
+  function syncSubjectChips() {
+    $$("#subject-chips .chip").forEach((c) => {
+      c.classList.toggle("active", c.getAttribute("data-subject") === practiceSubject);
+    });
+  }
 
   function renderTopicChips() {
     const topics = practiceSubject === "math" ? MATH_TOPICS : ENG_TOPICS;
@@ -152,7 +401,7 @@
       alert("ยังไม่มีข้อในหัวข้อนี้");
       return;
     }
-    const questions = shuffle(pool);
+    const questions = shuffle(pool).map(presentQuestion);
     const useTimer = $("#practice-timer-on").checked;
     const seconds = useTimer ? Math.max(60, Math.round(questions.length * 72)) : null;
     beginSession({
@@ -164,6 +413,16 @@
       practiceSubject,
       practiceTopic,
     });
+  }
+
+  function startTopicDrill(subject, topic) {
+    practiceSubject = subject === "english" ? "english" : "math";
+    practiceTopic = topic;
+    syncSubjectChips();
+    renderTopicChips();
+    const panel = $("#practice-panel");
+    if (panel) panel.classList.remove("hidden");
+    startPractice();
   }
 
   /* ---------- Session ---------- */
@@ -337,7 +596,6 @@
   }
 
   function skip() {
-    // leave unanswered, move next
     if (state.index < state.questions.length - 1) {
       state.index += 1;
       renderExam();
@@ -356,6 +614,14 @@
       $("#modal").classList.add("hidden");
       finishExam(false);
     };
+  }
+
+  function improveSentence(rows) {
+    const weak = weakestTopics(rows, 3).filter((t) => percentOf(t) < 80);
+    if (!weak.length) {
+      return "ชุดนี้วิเคราะห์ได้ดีทุกหัวข้อ ลองสุ่มชุดใหม่เพื่อยืนยันว่าทำข้อที่ไม่เคยเจอได้เหมือนกัน";
+    }
+    return "ควรกลับไปฝึกคิดหัวข้อ: " + weak.map((t) => t.topic).join(", ");
   }
 
   function finishExam(auto) {
@@ -383,14 +649,26 @@
       usedSec = Math.round((Date.now() - state.startedAt) / 1000);
     }
 
+    const topics = topicRows(qs, ans);
+    rememberSeen(qs);
     saveHistory({
       at: Date.now(),
       label: state.label + (auto ? " (หมดเวลา)" : ""),
       mode: state.mode,
       percent,
       correct,
+      wrong,
+      blank,
       total,
       usedSec,
+      topics: topics.map((t) => ({
+        subject: t.subject,
+        topic: t.topic,
+        correct: t.correct,
+        wrong: t.wrong,
+        blank: t.blank,
+        total: t.total,
+      })),
     });
 
     $("#result-title").textContent = auto ? "หมดเวลา — สรุปคะแนน" : "สรุปคะแนน";
@@ -401,6 +679,19 @@
     $("#stat-wrong").textContent = String(wrong);
     $("#stat-blank").textContent = String(blank);
     $("#stat-time").textContent = formatTime(usedSec);
+
+    renderTopicBars($("#topic-bars"), topics);
+    $("#improve-note").textContent = improveSentence(topics);
+    const worst = weakestTopics(topics, 1)[0];
+    const drill = $("#btn-drill");
+    if (worst && percentOf(worst) < 80) {
+      drill.classList.remove("hidden");
+      drill.textContent = "ฝึกหัวข้อที่ควรพัฒนา: " + worst.topic;
+      drill.dataset.subject = worst.subject;
+      drill.dataset.topic = worst.topic;
+    } else {
+      drill.classList.add("hidden");
+    }
 
     const review = $("#review-list");
     review.innerHTML = qs
@@ -424,7 +715,7 @@
           ? `<div class="passage" style="margin-bottom:8px">${escapeHtml(q.passage)}</div>`
           : "";
         return `<article class="review-item ${klass}">
-          <div class="status">ข้อ ${i + 1} · ${status}</div>
+          <div class="status">ข้อ ${i + 1} · ${status} · ${escapeHtml(q.topic)}</div>
           ${passageHtml}
           <div class="q-stem">${escapeHtml(q.stem)}</div>
           <div>คำตอบของคุณ: <strong>${your}</strong></div>
@@ -467,6 +758,8 @@
     } else if (["1", "2", "3", "4"].includes(e.key)) {
       e.preventDefault();
       const i = Number(e.key) - 1;
+      const q = state.questions[state.index];
+      if (i >= q.choices.length) return;
       state.answers[state.index] = i;
       renderExam();
     }
@@ -479,6 +772,7 @@
         const mode = btn.getAttribute("data-mode");
         if (mode === "practice") {
           $("#practice-panel").classList.toggle("hidden");
+          syncSubjectChips();
           renderTopicChips();
           return;
         }
@@ -489,14 +783,17 @@
     $$("#subject-chips .chip").forEach((btn) => {
       btn.addEventListener("click", () => {
         practiceSubject = btn.getAttribute("data-subject");
-        $$("#subject-chips .chip").forEach((c) =>
-          c.classList.toggle("active", c === btn)
-        );
+        syncSubjectChips();
         renderTopicChips();
       });
     });
 
     $("#btn-start-practice").addEventListener("click", startPractice);
+    $("#btn-practice-weak").addEventListener("click", () => {
+      const btn = $("#btn-practice-weak");
+      if (!btn.dataset.topic) return;
+      startTopicDrill(btn.dataset.subject, btn.dataset.topic);
+    });
     $("#btn-prev").addEventListener("click", goPrev);
     $("#btn-next").addEventListener("click", goNext);
     $("#btn-skip").addEventListener("click", skip);
@@ -519,10 +816,17 @@
       if (m === "practice") {
         practiceSubject = state.practiceSubject || "math";
         practiceTopic = state.practiceTopic || MATH_TOPICS[0];
+        syncSubjectChips();
+        renderTopicChips();
         startPractice();
       } else {
         startExamMode(m);
       }
+    });
+    $("#btn-drill").addEventListener("click", () => {
+      const btn = $("#btn-drill");
+      if (!btn.dataset.topic) return;
+      startTopicDrill(btn.dataset.subject, btn.dataset.topic);
     });
 
     $("#btn-pause").addEventListener("click", () => {
