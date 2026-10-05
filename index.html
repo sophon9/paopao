@@ -16,34 +16,34 @@
     <header class="hero">
       <div class="badge">สวนกุหลาบวิทยาลัย · ฝึกสอบ ม.1</div>
       <h1>เตรียมสอบเข้า ม.1 สวนกุหลาบ</h1>
-      <p class="subtitle">ฝึกคณิตศาสตร์และภาษาอังกฤษสไตล์ข้อสอบเข้า — สำหรับนักเรียน ป.6</p>
-      <p class="hint">เลือกโหมดด้านล่าง · กด 1–4 เพื่อเลือกคำตอบเมื่ออยู่ในข้อสอบ</p>
+      <p class="subtitle">ฝึกคิดและวิเคราะห์คณิตศาสตร์กับภาษาอังกฤษ — ทุกครั้งได้ข้อสอบคนละชุด เพื่อให้ทำข้อสอบจริงได้</p>
+      <p class="hint">ข้อและตัวเลือกถูกสับใหม่ทุกชุด · กด 1–4 เพื่อเลือกคำตอบ · ประวัติคะแนนบอกหัวข้อที่ควรกลับไปฝึก</p>
     </header>
 
     <div class="mode-grid" role="list">
       <button type="button" class="mode-card" data-mode="math" role="listitem">
         <div class="icon">ค</div>
         <h2>คณิตศาสตร์</h2>
-        <p>โจทย์หลายขั้นตอน จำนวน เศษส่วน อัตราส่วน สมการ เรขาคณิต สถิติ</p>
-        <div class="meta">30 ข้อ · 40 นาที</div>
+        <p>สุ่มจากทุกบท แล้วสลับตัวเลือก — ต้องวิเคราะห์โจทย์ใหม่ทุกครั้ง</p>
+        <div class="meta">30 ข้อ · 40 นาที · ชุดใหม่ทุกครั้ง</div>
       </button>
       <button type="button" class="mode-card" data-mode="english" role="listitem">
         <div class="icon">E</div>
         <h2>ภาษาอังกฤษ</h2>
-        <p>Grammar, Vocabulary, Conversation และ Reading สั้น ๆ</p>
-        <div class="meta">30 ข้อ · 35 นาที</div>
+        <p>สุ่ม Grammar, Vocabulary, Conversation และ Reading พร้อมสลับช้อยส์</p>
+        <div class="meta">30 ข้อ · 35 นาที · ชุดใหม่ทุกครั้ง</div>
       </button>
       <button type="button" class="mode-card" data-mode="combined" role="listitem">
         <div class="icon">Σ</div>
         <h2>สอบรวม</h2>
-        <p>คณิตฯ แล้วตามด้วยอังกฤษ — จำลองสนามสอบจริง</p>
-        <div class="meta">60 ข้อ · 75 นาที</div>
+        <p>คณิตฯ แล้วตามด้วยอังกฤษ แบบสนามสอบจริง แต่ละวิชาเป็นชุดสุ่มใหม่</p>
+        <div class="meta">60 ข้อ · 75 นาที · ชุดใหม่ทุกครั้ง</div>
       </button>
       <button type="button" class="mode-card" data-mode="practice" role="listitem" id="btn-show-practice">
         <div class="icon">ฝึก</div>
         <h2>ฝึกทีละบท</h2>
-        <p>เลือกหัวข้อที่ต้องการทบทวน ไม่บังคับจับเวลา</p>
-        <div class="meta">ไม่จำกัดจำนวน · ตัวจับเวลาแบบเลือกได้</div>
+        <p>เลือกหัวข้อที่ต้องการทบทวน ข้อและตัวเลือกถูกสับใหม่ทุกครั้ง</p>
+        <div class="meta">ทั้งบท · ตัวจับเวลาแบบเลือกได้</div>
       </button>
     </div>
 
@@ -60,13 +60,26 @@
       <button type="button" class="btn btn-primary" id="btn-start-practice">เริ่มฝึก</button>
     </section>
 
+    <section class="panel insight" aria-label="จุดที่ควรพัฒนา">
+      <h3>พัฒนาการจากการฝึก</h3>
+      <p id="insight-empty" class="history-empty">ยังไม่มีประวัติ — ทำอย่างน้อยหนึ่งชุด แล้วระบบจะชี้หัวข้อที่ควรฝึกเพิ่ม</p>
+      <div id="insight-body" class="hidden">
+        <p id="insight-summary" class="insight-summary"></p>
+        <p id="insight-trend" class="insight-trend"></p>
+        <div id="weak-list" class="topic-bars"></div>
+        <div class="nav-row">
+          <button type="button" class="btn btn-primary hidden" id="btn-practice-weak">ฝึกหัวข้อที่ควรพัฒนา</button>
+        </div>
+      </div>
+    </section>
+
     <section class="history panel" aria-label="ประวัติคะแนน">
-      <h3>ประวัติคะแนนล่าสุด</h3>
+      <h3>ประวัติคะแนน</h3>
       <p id="history-empty" class="history-empty">ยังไม่มีประวัติ — ลองทำข้อสอบสักรอบสิ</p>
       <ul id="history-list" class="history-list hidden"></ul>
     </section>
 
-    <p class="footer-note">ข้อสอบฝึกหัดต้นฉบับ · ไม่คัดลอกจากข้อสอบจริง · สำหรับเตรียมความพร้อมเท่านั้น</p>
+    <p class="footer-note">ทุกชุดสุ่มข้อและสลับตัวเลือก · ข้อสอบฝึกหัดต้นฉบับ ไม่คัดลอกจากข้อสอบจริง</p>
   </div>
 
   <!-- EXAM -->
@@ -126,9 +139,15 @@
       </div>
       <div class="nav-row" style="justify-content:center;margin-top:18px">
         <button type="button" class="btn btn-primary" id="btn-home">กลับหน้าแรก</button>
-        <button type="button" class="btn btn-ghost" id="btn-retry">ทำอีกครั้ง</button>
+        <button type="button" class="btn btn-ghost" id="btn-retry">สุ่มชุดใหม่</button>
+        <button type="button" class="btn btn-outline hidden" id="btn-drill">ฝึกหัวข้อที่ควรพัฒนา</button>
       </div>
     </div>
+    <section class="panel" id="result-topics" aria-label="คะแนนแยกหัวข้อ">
+      <h3>คะแนนแยกหัวข้อ — ใช้ดูว่าควรฝึกตรงไหน</h3>
+      <div id="topic-bars" class="topic-bars"></div>
+      <p id="improve-note" class="improve-note"></p>
+    </section>
     <h3 style="margin:0 0 12px">ตรวจคำตอบทีละข้อ</h3>
     <div class="review-list" id="review-list"></div>
   </div>
