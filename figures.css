@@ -1,0 +1,26 @@
+/* Figure styles for SVG produced by backend/bank/svg.py.
+   Shared by the app and the preview tool. */
+svg.fig { max-width: 100%; height: auto; overflow: visible; font-family: "Noto Sans Thai", system-ui, sans-serif; }
+.fig .fig-line { stroke: #2B2530; stroke-width: 2; fill: none; stroke-linecap: round; }
+.fig .fig-shape { fill: #FFFFFF; stroke: #2B2530; stroke-width: 2; stroke-linejoin: round; }
+.fig .fig-shade { fill: #F9C6DF; stroke: #2B2530; stroke-width: 2; stroke-linejoin: round; }
+.fig .fig-face2 { fill: #FCE4F0; stroke: #2B2530; stroke-width: 2; stroke-linejoin: round; }
+.fig .fig-face3 { fill: #F3CFE1; stroke: #2B2530; stroke-width: 2; stroke-linejoin: round; }
+.fig .fig-grid { fill: #FFFFFF; stroke: #B9AEB5; stroke-width: 1; }
+.fig .fig-mark { stroke: #C2186A; stroke-width: 1.6; fill: none; }
+.fig .fig-dot { fill: #C2186A; }
+.fig .fig-text { fill: #2B2530; }
+.fig .fig-dim { fill: #3F4C9E; font-weight: 600; }
+.fig .fig-vertex { fill: #2B2530; }
+.fig .fig-axis { fill: #6B6168; }
+.fig .fig-axisline { stroke: #4A4246; stroke-width: 1.5; }
+.fig .fig-gridline { stroke: #E8DFE4; stroke-width: 1; }
+.fig .fig-bar { stroke: none; rx: 3; }
+.fig .fig-slice { stroke: #FFFFFF; stroke-width: 2; }
+.fig .fig-onfill { fill: #FFFFFF; }
+.fig .fig-series { stroke: #E91E8C; stroke-width: 3; fill: none; stroke-linejoin: round; }
+.fig .fig-highlight { stroke: #E91E8C; stroke-width: 6; stroke-linecap: round; }
+.fig .fig-symbol { fill: #E91E8C; }
+.fig .fig-symbol-half { fill: #E91E8C; opacity: 0.4; }
+.fig .fig-hand-h { stroke: #2B2530; stroke-width: 5; stroke-linecap: round; }
+.fig .fig-hand-m { stroke: #E91E8C; stroke-width: 3; stroke-linecap: round; }

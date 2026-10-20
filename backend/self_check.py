@@ -1,131 +1,133 @@
-"""Check that generated papers stay unique and that answers are well formed."""
+"""End-to-end verification of the question bank, tutoring engine, and paper lifecycle."""
 
 import os
 import tempfile
 from collections import Counter
 
+from backend.bank import SKILLS, TEMPLATES, TOPICS
+from backend.bank.check import main as check_bank
 from backend.db import connect
-from backend.generate import TEMPLATES, make_reading_group, validate_item
-from backend.papers import create_paper, submit_paper
+from backend.papers import (
+    append_similar_question,
+    check_item_answer,
+    create_paper,
+    get_paper,
+    home_summary,
+    submit_paper,
+    use_hint,
+)
+from backend.tutor import get_lesson_payload, mistake_notebook
 
 
-def check_templates():
-    for tmpl in TEMPLATES:
-        made = 0
-        for _ in range(12):
-            item = tmpl()
-            if item is None:
-                continue
-            validate_item(item)
-            made += 1
-        if made < 4:
-            raise SystemExit(f"{tmpl.skill} produced only {made} items")
-    for _ in range(8):
-        group = make_reading_group()
-        if not group:
-            continue
-        passages = {item["passage"] for item in group}
-        if len(group) != 3 or len(passages) != 1:
-            raise SystemExit("reading group shape is wrong")
-        for item in group:
-            validate_item(item)
-
-
-def check_papers():
-    stems = []
-    ids = []
-    for _ in range(2):
-        paper = create_paper("math")
-        if len(paper["questions"]) != 30:
-            raise SystemExit("math paper length")
-        topics = Counter(q["topic"] for q in paper["questions"])
-        if len(topics) < 6:
-            raise SystemExit(f"math topics missing: {topics}")
-        stems.extend((q["stem"], q.get("passage") or "") for q in paper["questions"])
-        ids.extend(q["id"] for q in paper["questions"])
-        _grade_perfect(paper)
-
-    for _ in range(2):
-        paper = create_paper("english")
-        if len(paper["questions"]) != 30:
-            raise SystemExit("english paper length")
-        topics = Counter(q["topic"] for q in paper["questions"])
-        if set(topics) != {"Grammar/Tenses", "Vocabulary", "Conversation", "Reading"}:
-            raise SystemExit(f"english topics: {topics}")
-        if topics["Reading"] != 6:
-            raise SystemExit("reading count")
-        stems.extend((q["stem"], q.get("passage") or "") for q in paper["questions"])
-        ids.extend(q["id"] for q in paper["questions"])
-
-    combined = create_paper("combined")
-    if len(combined["questions"]) != 60:
-        raise SystemExit("combined length")
-    if combined["questions"][0]["subject"] != "math" or combined["questions"][30]["subject"] != "english":
-        raise SystemExit("combined order")
-    stems.extend((q["stem"], q.get("passage") or "") for q in combined["questions"])
-    ids.extend(q["id"] for q in combined["questions"])
-
-    practice = create_paper("practice", subject="math", topic="สมการ", timer=False)
-    if len(practice["questions"]) != 8 or any(q["topic"] != "สมการ" for q in practice["questions"]):
-        raise SystemExit("practice topic filter failed")
-    stems.extend((q["stem"], q.get("passage") or "") for q in practice["questions"])
-    ids.extend(q["id"] for q in practice["questions"])
-
-    if len(ids) != len(set(ids)):
-        raise SystemExit("question ids repeated across papers")
-    if len(stems) != len(set(stems)):
-        dupes = [stem for stem, n in Counter(stems).items() if n > 1]
-        raise SystemExit(f"stems repeated: {dupes[:3]}")
-
-    conn = connect()
-    try:
-        row = conn.execute(
-            """
-            SELECT question_id, COUNT(*) AS n
-            FROM paper_items
-            GROUP BY question_id
-            HAVING n > 1
-            """
-        ).fetchone()
-        if row:
-            raise SystemExit("database allowed a repeated question")
-    finally:
-        conn.close()
-
-
-def _grade_perfect(paper):
+def _grade_sample(paper, all_correct=True):
     conn = connect()
     try:
         rows = conn.execute(
-            "SELECT answer_index FROM paper_items WHERE paper_id = ? ORDER BY position",
+            "SELECT position, question_id FROM paper_items WHERE paper_id = ? ORDER BY position",
             (paper["paperId"],),
         ).fetchall()
+        answers = []
+        for idx, r in enumerate(rows):
+            ans = conn.execute("SELECT answer_index FROM questions WHERE id = ?", (r["question_id"],)).fetchone()[
+                "answer_index"
+            ]
+            if all_correct or idx % 3 != 0:
+                answers.append(ans)
+            else:
+                answers.append((ans + 1) % 4)
     finally:
         conn.close()
-    answers = [row["answer_index"] for row in rows]
-    result = submit_paper(paper["paperId"], answers, 90, False)
-    if result["percent"] != 100 or result["correct"] != 30:
-        raise SystemExit(f"perfect paper graded as {result['percent']}")
-    answers[0] = (answers[0] + 1) % 4
-    again = submit_paper(paper["paperId"], answers, 90, False)
-    if again["percent"] != 100:
-        raise SystemExit("resubmit changed a finished paper")
+    res = submit_paper(paper["paperId"], answers, used_sec=320, auto=False)
+    if all_correct and res["percent"] != 100:
+        raise SystemExit(f"expected 100%, got {res['percent']}%")
+    return res
+
+
+def check_papers_and_tutor():
+    stems = []
+    ids = []
+
+    # 1. Mock Math (30 items across 8 topics)
+    for _ in range(2):
+        paper = create_paper("math")
+        if len(paper["questions"]) != 30:
+            raise SystemExit(f"math paper length {len(paper['questions'])} != 30")
+        topics = Counter(q["topic"] for q in paper["questions"])
+        if len(topics) < 8:
+            raise SystemExit(f"math topics missing: {topics}")
+        stems.extend((q["stem"], tuple(q["choices"]), q.get("passage") or "", q.get("figure") or "") for q in paper["questions"])
+        ids.extend(q["id"] for q in paper["questions"])
+        _grade_sample(paper, all_correct=True)
+
+    # 2. Mock English (40 items across 5 topics)
+    for _ in range(2):
+        paper = create_paper("english")
+        if len(paper["questions"]) != 40:
+            raise SystemExit(f"english paper length {len(paper['questions'])} != 40")
+        topics = Counter(q["topic"] for q in paper["questions"])
+        if len(topics) < 5:
+            raise SystemExit(f"english topics missing: {topics}")
+        stems.extend((q["stem"], tuple(q["choices"]), q.get("passage") or "", q.get("figure") or "") for q in paper["questions"])
+        ids.extend(q["id"] for q in paper["questions"])
+        _grade_sample(paper, all_correct=False)
+
+    # 3. Diagnostic, Adaptive, Skill, Review + Tutor interactions
+    diag = create_paper("diagnostic", subject="math")
+    if len(diag["questions"]) < 16:
+        raise SystemExit("diagnostic math too short")
+    _grade_sample(diag, all_correct=False)
+
+    sample_skill = next(iter(SKILLS))
+    drill = create_paper("skill", subject=SKILLS[sample_skill]["subject"], focus=sample_skill, tutor=True, count=6)
+    h = use_hint(drill["paperId"], 0)
+    if not h.get("hint"):
+        raise SystemExit("missing hint")
+    chk = check_item_answer(drill["paperId"], 0, 0, time_ms=4200, flagged=True)
+    if "steps" not in chk or not chk["steps"]:
+        raise SystemExit("missing steps in check_item_answer")
+    sim = append_similar_question(drill["paperId"], 0)
+    if not sim.get("stem"):
+        raise SystemExit("append_similar_question failed")
+
+    # Submit the drill (now 7 items because 1 similar was appended)
+    submit_paper(drill["paperId"], [0] * 7, used_sec=120, auto=False)
+    loaded = get_paper(drill["paperId"])
+    if loaded["total"] != 7:
+        raise SystemExit("expected 7 items after similar append")
+
+    # 4. Lesson & Mistake Notebook & Home Dashboard
+    conn = connect()
+    try:
+        les = get_lesson_payload(conn, sample_skill)
+        if not les.get("lesson", {}).get("concept"):
+            raise SystemExit("lesson missing concept")
+        nb = mistake_notebook(conn, limit=20)
+        if not nb:
+            raise SystemExit("expected mistake notebook items after wrong answers")
+    finally:
+        conn.close()
+
+    dash = home_summary()
+    if not dash.get("topics") or not dash.get("studyPlan"):
+        raise SystemExit("dashboard missing topics or studyPlan")
+
+    if len(ids) != len(set(ids)):
+        raise SystemExit("duplicate question id across papers")
+    if len(stems) != len(set(stems)):
+        raise SystemExit("duplicate question across mock papers")
 
 
 def main():
-    check_templates()
-    check_papers()
-    print("self-check ok")
+    rc = check_bank([])
+    if rc != 0:
+        raise SystemExit(rc)
+    with tempfile.TemporaryDirectory() as tmp:
+        os.environ["TUTOR_DB"] = os.path.join(tmp, "check.db")
+        conn = connect()
+        conn.close()
+        check_papers_and_tutor()
+    print(f"self_check passed: {len(TOPICS)} topics · {len(SKILLS)} skills · {len(TEMPLATES)} templates")
 
 
 if __name__ == "__main__":
-    fd, path = tempfile.mkstemp(suffix=".db")
-    os.close(fd)
-    os.environ["QUIZ_DB"] = path
-    try:
-        main()
-    finally:
-        os.remove(path)
-        for extra in (path + "-wal", path + "-shm"):
-            if os.path.exists(extra):
-                os.remove(extra)
+    main()

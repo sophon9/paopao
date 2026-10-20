@@ -1,17 +1,27 @@
-"""Serve the practice app and the quiz API on one port."""
+"""Serve the M.1 entrance tutor web app and JSON API on one port."""
 
 import json
 import mimetypes
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from backend.papers import create_paper, get_paper, home_summary, submit_paper
+from backend.db import connect
+from backend.papers import (
+    append_similar_question,
+    check_item_answer,
+    create_paper,
+    get_paper,
+    home_summary,
+    submit_paper,
+    use_hint,
+)
+from backend.tutor import get_lesson_payload, mistake_notebook
 
 STATIC_TYPES = {
     ".html": "text/html; charset=utf-8",
@@ -45,16 +55,47 @@ class Handler(BaseHTTPRequestHandler):
         return json.loads(raw.decode("utf-8"))
 
     def do_GET(self):
-        path = urlparse(self.path).path
+        parsed = urlparse(self.path)
+        path = parsed.path
+        qs = parse_qs(parsed.query)
+
         if path == "/api/health":
             self._json(200, {"ok": True})
             return
+
         if path == "/api/home":
             try:
                 self._json(200, home_summary())
             except Exception as exc:
                 self._json(500, {"error": str(exc)})
             return
+
+        if path.startswith("/api/lessons/"):
+            skill_key = unquote(path[len("/api/lessons/"):].strip("/"))
+            conn = connect()
+            try:
+                self._json(200, get_lesson_payload(conn, skill_key))
+            except ValueError as exc:
+                self._json(404, {"error": str(exc)})
+            except Exception as exc:
+                self._json(500, {"error": str(exc)})
+            finally:
+                conn.close()
+            return
+
+        if path == "/api/mistakes":
+            subj = (qs.get("subject") or [None])[0]
+            topic = (qs.get("topic") or [None])[0]
+            limit = int((qs.get("limit") or ["60"])[0])
+            conn = connect()
+            try:
+                self._json(200, {"items": mistake_notebook(conn, limit=limit, subject=subj, topic=topic)})
+            except Exception as exc:
+                self._json(500, {"error": str(exc)})
+            finally:
+                conn.close()
+            return
+
         if path.startswith("/api/papers/") and path.count("/") == 3:
             try:
                 paper_id = int(path.rstrip("/").split("/")[3])
@@ -64,6 +105,7 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as exc:
                 self._json(500, {"error": str(exc)})
             return
+
         self._static(path)
 
     def do_POST(self):
@@ -73,32 +115,62 @@ class Handler(BaseHTTPRequestHandler):
         except json.JSONDecodeError:
             self._json(400, {"error": "ข้อมูลที่ส่งมาอ่านไม่ได้"})
             return
+
         try:
             if path == "/api/papers":
                 payload = create_paper(
-                    mode=body.get("mode"),
+                    mode=body.get("mode", "adaptive"),
                     subject=body.get("subject"),
                     topic=body.get("topic"),
+                    focus=body.get("focus"),
+                    tutor=bool(body.get("tutor", False)),
                     timer=bool(body.get("timer", True)),
+                    count=body.get("count"),
+                    difficulty=body.get("difficulty"),
                 )
                 self._json(200, payload)
                 return
-            if path.startswith("/api/papers/") and path.endswith("/submit"):
-                paper_id = int(path.split("/")[3])
-                payload = submit_paper(
-                    paper_id,
-                    body.get("answers"),
-                    body.get("usedSec") or 0,
-                    bool(body.get("auto")),
-                )
-                self._json(200, payload)
-                return
+
+            parts = path.strip("/").split("/")
+            if len(parts) == 4 and parts[0] == "api" and parts[1] == "papers":
+                paper_id = int(parts[2])
+                action = parts[3]
+                if action == "hint":
+                    self._json(200, use_hint(paper_id, body.get("position", 0)))
+                    return
+                if action == "check":
+                    self._json(
+                        200,
+                        check_item_answer(
+                            paper_id,
+                            body.get("position", 0),
+                            body.get("chosen"),
+                            time_ms=body.get("timeMs"),
+                            flagged=bool(body.get("flagged", False)),
+                        ),
+                    )
+                    return
+                if action == "similar":
+                    self._json(200, append_similar_question(paper_id, body.get("position", 0)))
+                    return
+                if action == "submit":
+                    payload = submit_paper(
+                        paper_id,
+                        body.get("answers"),
+                        used_sec=body.get("usedSec") or 0,
+                        auto=bool(body.get("auto")),
+                        times_ms=body.get("timesMs"),
+                        flags=body.get("flags"),
+                    )
+                    self._json(200, payload)
+                    return
         except ValueError as exc:
             self._json(400, {"error": str(exc)})
             return
         except Exception as exc:
             self._json(500, {"error": str(exc)})
             return
+
         self._json(404, {"error": "ไม่พบรายการ"})
 
     def _static(self, path):
@@ -116,7 +188,10 @@ class Handler(BaseHTTPRequestHandler):
             self._json(404, {"error": "ไม่พบไฟล์"})
             return
         data = target.read_bytes()
-        mime = STATIC_TYPES.get(target.suffix, mimetypes.guess_type(target.name)[0] or "application/octet-stream")
+        mime = STATIC_TYPES.get(
+            target.suffix,
+            mimetypes.guess_type(target.name)[0] or "application/octet-stream",
+        )
         self.send_response(200)
         self.send_header("Content-Type", mime)
         self.send_header("Content-Length", str(len(data)))
@@ -128,7 +203,7 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description="Suankularb practice server")
+    parser = argparse.ArgumentParser(description="M.1 Entrance Tutor & Practice Server")
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8082)
     args = parser.parse_args()

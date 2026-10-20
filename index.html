@@ -3,161 +3,501 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="เตรียมสอบเข้า ม.1 — คณิตศาสตร์และภาษาอังกฤษ" />
-  <title>เตรียมสอบเข้า ม.1</title>
+  <meta name="description" content="คู่คิดติวสอบเข้า ม.1 — คณิตศาสตร์และภาษาอังกฤษ ระดับโรงเรียนแข่งขันสูง" />
+  <title>คู่คิดติวสอบเข้า ม.1 · คณิต &amp; อังกฤษ</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="figures.css" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- HOME -->
+  <!-- ==================== HOME / DASHBOARD SHELL ==================== -->
   <div id="screen-home" class="app-shell">
-    <header class="hero">
-      <div class="badge">ฝึกสอบ ม.1</div>
-      <h1>เตรียมสอบเข้า ม.1</h1>
-      <p class="subtitle">ฝึกคิดคณิตศาสตร์และภาษาอังกฤษให้พร้อมสอบจริง — ทุกชุดเป็นข้อใหม่ที่ยังไม่เคยออก</p>
-      <p class="hint">ระบบสร้างโจทย์แล้วเก็บลงฐานข้อมูลของเครื่องนี้ · ข้อที่เคยใช้จะไม่ถูกนำมาซ้ำ · กด 1–4 เพื่อเลือกคำตอบ</p>
-    </header>
-
-    <div class="mode-grid" role="list">
-      <button type="button" class="mode-card" data-mode="math" role="listitem">
-        <div class="icon">ค</div>
-        <h2>คณิตศาสตร์</h2>
-        <p>จำนวน เศษส่วน อัตราส่วน สมการ เรขาคณิต สถิติ — คนละชุดกับครั้งที่แล้ว</p>
-        <div class="meta">30 ข้อ · 40 นาที · ไม่ซ้ำชุดเก่า</div>
-      </button>
-      <button type="button" class="mode-card" data-mode="english" role="listitem">
-        <div class="icon">E</div>
-        <h2>ภาษาอังกฤษ</h2>
-        <p>Grammar, Vocabulary, Conversation และ Reading คนละบทความกับครั้งที่แล้ว</p>
-        <div class="meta">30 ข้อ · 35 นาที · ไม่ซ้ำชุดเก่า</div>
-      </button>
-      <button type="button" class="mode-card" data-mode="combined" role="listitem">
-        <div class="icon">Σ</div>
-        <h2>สอบรวม</h2>
-        <p>คณิตฯ แล้วตามด้วยอังกฤษ แบบสนามสอบ แต่เป็นข้อที่ยังไม่เคยทำ</p>
-        <div class="meta">60 ข้อ · 75 นาที · ไม่ซ้ำชุดเก่า</div>
-      </button>
-      <button type="button" class="mode-card" data-mode="practice" role="listitem" id="btn-show-practice">
-        <div class="icon">ฝึก</div>
-        <h2>ฝึกทีละบท</h2>
-        <p>เลือกหัวข้อที่ยังไม่แม่น ระบบจะให้ข้อใหม่ของบทนั้น</p>
-        <div class="meta">8 ข้อใหม่ · ตัวจับเวลาแบบเลือกได้</div>
-      </button>
-    </div>
-
-    <section id="practice-panel" class="panel hidden" aria-label="ฝึกทีละบท">
-      <h3>เลือกวิชาและหัวข้อ</h3>
-      <div class="topic-row" id="subject-chips">
-        <button type="button" class="chip active" data-subject="math">คณิตศาสตร์</button>
-        <button type="button" class="chip" data-subject="english">ภาษาอังกฤษ</button>
-      </div>
-      <div class="topic-row" id="topic-chips" aria-label="หัวข้อ"></div>
-      <div class="soft-timer">
-        <label><input type="checkbox" id="practice-timer-on" /> ใช้ตัวจับเวลาแบบอ่อน (นาทีละข้อประมาณ 1.2)</label>
-      </div>
-      <button type="button" class="btn btn-primary" id="btn-start-practice">เริ่มฝึก</button>
-    </section>
-
-    <section class="panel" id="insight-panel" aria-label="จุดที่ควรฝึกต่อ">
-      <h3>จุดที่ควรฝึกต่อ</h3>
-      <p id="insight-empty" class="history-empty">ยังไม่มีคะแนน — ทำหนึ่งชุดแล้วระบบจะชี้หัวข้อที่ควรกลับไปฝึก</p>
-      <div id="insight-body" class="hidden">
-        <p id="insight-summary" class="insight-summary"></p>
-        <div id="weak-list" class="topic-bars"></div>
-        <div class="nav-row">
-          <button type="button" class="btn btn-primary hidden" id="btn-practice-weak">ฝึกหัวข้อที่อ่อนที่สุด</button>
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-logo" aria-hidden="true">ม.1</div>
+        <div>
+          <div class="brand-badge">คู่คิดติวเตอร์ส่วนตัว · สวนกุหลาบ · สาธิต · เตรียมฯ น้อย · Gifted/EP</div>
+          <h1 class="brand-title">ระบบติวและวิเคราะห์สอบเข้า ม.1</h1>
         </div>
       </div>
-    </section>
+      <div class="streak-pill" id="streak-pill" title="สถิติการฝึกต่อเนื่อง">
+        <span class="streak-fire">🔥</span>
+        <div>
+          <div class="streak-num"><span id="streak-days">0</span> วันต่อเนื่อง</div>
+          <div class="streak-sub">วันนี้ทำแล้ว <span id="today-done">0</span>/<span id="today-goal">15</span> ข้อ</div>
+        </div>
+      </div>
+    </header>
 
-    <section class="history panel" aria-label="ประวัติคะแนน">
-      <h3>ประวัติคะแนน</h3>
-      <p id="history-hint" class="history-empty hidden">กดแต่ละครั้งเพื่อดูว่าข้อไหนถูก ข้อไหนผิด และอ่านคำอธิบายของข้อที่ผิด</p>
-      <p id="history-empty" class="history-empty">ยังไม่มีประวัติ — ลองทำข้อสอบสักรอบสิ</p>
-      <ul id="history-list" class="history-list hidden"></ul>
-    </section>
+    <!-- Primary navigation tabs -->
+    <nav class="main-tabs" role="tablist" aria-label="เมนูหลัก">
+      <button type="button" class="main-tab active" data-tab="overview" role="tab" aria-selected="true">
+        <span>🏠</span> แผนการเรียน &amp; ฝึกซ้อม
+      </button>
+      <button type="button" class="main-tab" data-tab="curriculum" role="tab" aria-selected="false">
+        <span>📚</span> แผนผังทักษะ &amp; บทเรียน <span class="tab-badge" id="tab-skills-count">0</span>
+      </button>
+      <button type="button" class="main-tab" data-tab="analytics" role="tab" aria-selected="false">
+        <span>📊</span> วิเคราะห์จุดอ่อน &amp; สมุดจุดผิด <span class="tab-badge warn" id="tab-mistakes-count">0</span>
+      </button>
+      <button type="button" class="main-tab" data-tab="history" role="tab" aria-selected="false">
+        <span>🗂️</span> ประวัติการสอบ <span class="tab-badge" id="tab-history-count">0</span>
+      </button>
+    </nav>
+
+    <!-- ==================== TAB 1: OVERVIEW & STUDY PLAN ==================== -->
+    <div id="tab-overview" class="tab-pane">
+      <!-- Readiness Dashboard Card -->
+      <section class="readiness-grid" aria-label="ความพร้อมสอบเข้า ม.1">
+        <div class="readiness-card main-gauge-card">
+          <div class="gauge-wrap">
+            <svg viewBox="0 0 140 140" class="ring-svg" aria-hidden="true">
+              <circle cx="70" cy="70" r="56" class="ring-bg" />
+              <circle cx="70" cy="70" r="56" class="ring-fill" id="overall-ring" stroke-dasharray="0 360" />
+            </svg>
+            <div class="gauge-center">
+              <div class="gauge-value" id="readiness-overall">0%</div>
+              <div class="gauge-label">ความพร้อมรวม</div>
+            </div>
+          </div>
+          <div class="readiness-details">
+            <h2>ระดับความพร้อมสอบเข้า ม.1</h2>
+            <p class="muted-text" id="readiness-verdict">
+              กำลังประมวลผลข้อมูลการฝึกซ้อมของคุณ...
+            </p>
+            <div class="benchmarks" id="benchmarks-list"></div>
+          </div>
+        </div>
+
+        <div class="readiness-side">
+          <div class="subject-stat-card math">
+            <div class="subj-head">
+              <span class="subj-icon">🔢</span>
+              <div>
+                <h3>คณิตศาสตร์เข้มข้น</h3>
+                <span class="subj-sub" id="math-cov-text">ครอบคลุม 0% ของหลักสูตร</span>
+              </div>
+              <div class="subj-score" id="math-readiness">0%</div>
+            </div>
+            <div class="progress-track"><div class="progress-fill math" id="math-bar" style="width:0%"></div></div>
+            <div class="subj-actions">
+              <button type="button" class="btn btn-xs btn-ghost" data-quick="adaptive-math">🧑‍🏫 ติวปรับระดับ</button>
+              <button type="button" class="btn btn-xs btn-outline" data-quick="diag-math">🧭 วัดระดับ</button>
+              <button type="button" class="btn btn-xs btn-primary" data-quick="mock-math">⏱️ จำลองสอบ</button>
+            </div>
+          </div>
+
+          <div class="subject-stat-card english">
+            <div class="subj-head">
+              <span class="subj-icon">🇬🇧</span>
+              <div>
+                <h3>ภาษาอังกฤษเข้มข้น</h3>
+                <span class="subj-sub" id="eng-cov-text">ครอบคลุม 0% ของหลักสูตร</span>
+              </div>
+              <div class="subj-score" id="eng-readiness">0%</div>
+            </div>
+            <div class="progress-track"><div class="progress-fill english" id="eng-bar" style="width:0%"></div></div>
+            <div class="subj-actions">
+              <button type="button" class="btn btn-xs btn-ghost" data-quick="adaptive-eng">🧑‍🏫 ติวปรับระดับ</button>
+              <button type="button" class="btn btn-xs btn-outline" data-quick="diag-eng">🧭 วัดระดับ</button>
+              <button type="button" class="btn btn-xs btn-primary" data-quick="mock-eng">⏱️ จำลองสอบ</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Coach Study Plan -->
+      <section class="panel coach-panel" aria-label="คำแนะนำจากโค้ชวันนี้">
+        <div class="section-header">
+          <div>
+            <span class="eyebrow">🧑‍🏫 คู่คิดติวเตอร์แนะนำ</span>
+            <h3>แผนฝึกซ้อมที่เหมาะกับคุณที่สุดในตอนนี้</h3>
+          </div>
+          <div class="activity-mini" id="activity-14d" title="ความสม่ำเสมอ 14 วันล่าสุด"></div>
+        </div>
+        <div class="plan-grid" id="study-plan-grid"></div>
+      </section>
+
+      <!-- Mode Cards (compatible with both quick practice & full exam) -->
+      <section aria-label="เลือกโหมดการฝึกและสอบ">
+        <div class="section-header">
+          <div>
+            <span class="eyebrow">🎯 เลือกโหมดการฝึกฝน</span>
+            <h3>สนามสอบจำลอง &amp; โหมดฝึกกับติวเตอร์</h3>
+          </div>
+        </div>
+        <div class="mode-grid" role="list">
+          <button type="button" class="mode-card" data-mode="math" role="listitem">
+            <div class="mode-top">
+              <div class="icon">ค</div>
+              <span class="mode-pill">สนามสอบจริง</span>
+            </div>
+            <h2>จำลองสอบ คณิตศาสตร์</h2>
+            <p>ครบทั้ง 8 บท พร้อมรูปเรขาคณิต แผนภูมิ และโจทย์ประยุกต์ระดับโรงเรียนแข่งขันสูง</p>
+            <div class="meta">30 ข้อ · 60 นาที · โจทย์สร้างใหม่ไม่ซ้ำ</div>
+          </button>
+
+          <button type="button" class="mode-card" data-mode="english" role="listitem">
+            <div class="mode-top">
+              <div class="icon">E</div>
+              <span class="mode-pill">สนามสอบจริง</span>
+            </div>
+            <h2>จำลองสอบ ภาษาอังกฤษ</h2>
+            <p>Grammar, Vocabulary, Conversation, Error Identification และ Reading หลายประเภท</p>
+            <div class="meta">40 ข้อ · 50 นาที · โจทย์สร้างใหม่ไม่ซ้ำ</div>
+          </button>
+
+          <button type="button" class="mode-card" data-mode="combined" role="listitem">
+            <div class="mode-top">
+              <div class="icon">Σ</div>
+              <span class="mode-pill">สนามสอบใหญ่</span>
+            </div>
+            <h2>สอบรวม 2 วิชา (Full Mock)</h2>
+            <p>จำลองการสอบเข้า ม.1 เต็มรูปแบบ คณิตศาสตร์ต่อด้วยภาษาอังกฤษ วัดความอึดและการบริหารเวลา</p>
+            <div class="meta">70 ข้อ · 110 นาที · วิเคราะห์ผลละเอียด</div>
+          </button>
+
+          <button type="button" class="mode-card highlight-card" data-mode="practice" role="listitem" id="btn-show-practice">
+            <div class="mode-top">
+              <div class="icon">ฝึก</div>
+              <span class="mode-pill tutor-pill">มีติวเตอร์ช่วยสอน</span>
+            </div>
+            <h2>ฝึกเจาะจงบท / ทักษะ</h2>
+            <p>เลือกบทหรือทักษะย่อย เลือกความยากได้ เปิดคำใบ้และดูเฉลยละเอียดทีละขั้นได้ทันที</p>
+            <div class="meta">กำหนดจำนวนข้อได้ · โหมดติวเตอร์ตรวจทีละข้อ</div>
+          </button>
+        </div>
+      </section>
+
+      <!-- Custom Practice Builder Panel -->
+      <section id="practice-panel" class="panel builder-panel hidden" aria-label="ตั้งค่าการฝึกทีละบท">
+        <div class="section-header">
+          <div>
+            <span class="eyebrow">⚙️ ออกแบบชุดฝึกด้วยตัวเอง</span>
+            <h3>เลือกวิชา บทเรียน ทักษะย่อย และรูปแบบการสอน</h3>
+          </div>
+        </div>
+
+        <div class="builder-row">
+          <label class="builder-label">1. เลือกวิชา</label>
+          <div class="topic-row" id="subject-chips">
+            <button type="button" class="chip active" data-subject="math">🔢 คณิตศาสตร์ (8 บท)</button>
+            <button type="button" class="chip" data-subject="english">🇬🇧 ภาษาอังกฤษ (5 บท)</button>
+          </div>
+        </div>
+
+        <div class="builder-row">
+          <label class="builder-label">2. เลือกบทเรียน</label>
+          <div class="topic-row" id="topic-chips" aria-label="หัวข้อ"></div>
+        </div>
+
+        <div class="builder-row">
+          <label class="builder-label">3. เลือกทักษะย่อย (หรือฝึกทั้งบท)</label>
+          <div class="topic-row" id="skill-chips" aria-label="ทักษะย่อย"></div>
+        </div>
+
+        <div class="builder-options">
+          <div class="opt-group">
+            <label class="builder-label">ระดับความยาก</label>
+            <div class="topic-row" id="diff-chips">
+              <button type="button" class="chip active" data-diff="">🎯 ปรับตามฝีมืออัตโนมัติ</button>
+              <button type="button" class="chip" data-diff="easy">ง่าย (ปูพื้นฐาน)</button>
+              <button type="button" class="chip" data-diff="medium">ปานกลาง</button>
+              <button type="button" class="chip" data-diff="hard">ยาก (แนวข้อสอบจริง)</button>
+              <button type="button" class="chip" data-diff="challenge">ท้าทาย (Gifted/แข่งขันสูง)</button>
+            </div>
+          </div>
+
+          <div class="opt-group">
+            <label class="builder-label">จำนวนข้อ</label>
+            <div class="topic-row" id="count-chips">
+              <button type="button" class="chip" data-count="5">5 ข้อ (ไว)</button>
+              <button type="button" class="chip active" data-count="8">8 ข้อ (กำลังดี)</button>
+              <button type="button" class="chip" data-count="12">12 ข้อ (เข้มข้น)</button>
+              <button type="button" class="chip" data-count="20">20 ข้อ (จัดเต็ม)</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="builder-toggles">
+          <label class="toggle-item">
+            <input type="checkbox" id="practice-tutor-on" checked />
+            <span><strong>🧑‍🏫 โหมดติวเตอร์ (แนะนำ)</strong> — ตรวจคำตอบทีละข้อ อธิบายทันทีเมื่อตอบผิด และขอลองโจทย์คล้ายกันได้</span>
+          </label>
+          <label class="toggle-item">
+            <input type="checkbox" id="practice-timer-on" />
+            <span><strong>⏱️ จับเวลาฝึกความไว</strong> — ฝึกบริหารเวลาข้อละประมาณ 1.5 นาที</span>
+          </label>
+        </div>
+
+        <div class="nav-row">
+          <button type="button" class="btn btn-primary" id="btn-start-practice">🚀 เริ่มฝึกตามที่ตั้งค่า</button>
+          <button type="button" class="btn btn-outline hidden" id="btn-open-selected-lesson">📖 อ่านบทเรียนของทักษะนี้ก่อน</button>
+        </div>
+      </section>
+
+      <!-- Weak Topics Quick Summary (also preserves legacy IDs for compatibility) -->
+      <section class="panel" id="insight-panel" aria-label="ภาพรวมความแม่นยำรายบท">
+        <div class="section-header">
+          <div>
+            <span class="eyebrow">📈 ภาพรวมรายบท</span>
+            <h3>จุดที่ควรฝึกต่อ &amp; ความแม่นยำแยกตามบทเรียน</h3>
+          </div>
+          <button type="button" class="btn btn-sm btn-ghost" id="btn-goto-curriculum">ดูทักษะย่อยทั้งหมด →</button>
+        </div>
+        <p id="insight-empty" class="history-empty">ยังไม่มีคะแนน — เริ่มจากทำแบบวัดระดับหรือชุดฝึกสั้น ๆ แล้วระบบจะวิเคราะห์จุดอ่อนให้ละเอียด</p>
+        <div id="insight-body" class="hidden">
+          <p id="insight-summary" class="insight-summary"></p>
+          <div id="weak-list" class="topic-bars"></div>
+          <div class="nav-row" style="margin-top:14px">
+            <button type="button" class="btn btn-primary hidden" id="btn-practice-weak">ฝึกหัวข้อที่อ่อนที่สุด</button>
+            <button type="button" class="btn btn-outline" id="btn-review-mistakes-quick">🔁 ทบทวนจุดที่เคยพลาด</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ==================== TAB 2: CURRICULUM & LESSONS ==================== -->
+    <div id="tab-curriculum" class="tab-pane hidden">
+      <section class="panel">
+        <div class="section-header">
+          <div>
+            <span class="eyebrow">📚 คลังบทเรียนและทักษะทั้ง 13 บท</span>
+            <h3>เรียนเนื้อหา สรุปสูตร เทคนิคคิดเร็ว และฝึกแยกตามทักษะย่อย</h3>
+          </div>
+          <div class="topic-row" id="curr-subj-filter">
+            <button type="button" class="chip active" data-curr-subj="all">ทั้งหมด</button>
+            <button type="button" class="chip" data-curr-subj="math">🔢 คณิตศาสตร์</button>
+            <button type="button" class="chip" data-curr-subj="english">🇬🇧 ภาษาอังกฤษ</button>
+          </div>
+        </div>
+        <div class="status-legend">
+          <span class="status-pill mastered">★ แม่นยำแล้ว</span>
+          <span class="status-pill practicing">● กำลังฝึกให้คล่อง</span>
+          <span class="status-pill learning">◐ กำลังปูพื้นฐาน</span>
+          <span class="status-pill rusty">↻ ควรทบทวนกันลืม</span>
+          <span class="status-pill unseen">○ ยังไม่เคยฝึก</span>
+        </div>
+        <div id="curriculum-topics" class="curriculum-list"></div>
+      </section>
+    </div>
+
+    <!-- ==================== TAB 3: ANALYTICS & MISTAKE NOTEBOOK ==================== -->
+    <div id="tab-analytics" class="tab-pane hidden">
+      <div class="analytics-grid">
+        <section class="panel">
+          <span class="eyebrow">🕸️ แผนผังเรดาร์ความแม่นยำ</span>
+          <h3>สมดุลความถนัดรายบท</h3>
+          <div class="radar-row" id="radar-charts"></div>
+        </section>
+
+        <section class="panel">
+          <span class="eyebrow">🔍 วิเคราะห์สาเหตุที่มักพลาด</span>
+          <h3>นิสัยการทำข้อสอบที่ต้องระวัง</h3>
+          <p class="muted-text" id="mistake-pattern-intro">
+            ระบบวิเคราะห์จากตัวเลือกที่คุณกดผิด ว่าเกิดจากความเข้าใจสูตร การคำนวณ หรือการอ่านโจทย์ไม่ครบ
+          </p>
+          <div id="mistake-patterns-box" class="mistake-patterns"></div>
+        </section>
+      </div>
+
+      <section class="panel">
+        <div class="section-header">
+          <div>
+            <span class="eyebrow">📓 สมุดจดข้อที่เคยพลาด (Mistake Notebook)</span>
+            <h3>ทบทวนข้อที่เคยตอบผิด พร้อมเหตุผลและบทเรียนเสริม</h3>
+          </div>
+          <div class="topic-row" id="notebook-filter">
+            <button type="button" class="chip active" data-nb-subj="">ทุกวิชา</button>
+            <button type="button" class="chip" data-nb-subj="math">คณิตศาสตร์</button>
+            <button type="button" class="chip" data-nb-subj="english">ภาษาอังกฤษ</button>
+            <button type="button" class="btn btn-sm btn-primary" id="btn-drill-mistakes">🔁 สุ่มฝึกซ่อมจุดที่เคยพลาด (8 ข้อ)</button>
+          </div>
+        </div>
+        <div id="notebook-list" class="review-list"></div>
+      </section>
+    </div>
+
+    <!-- ==================== TAB 4: SESSION HISTORY ==================== -->
+    <div id="tab-history" class="tab-pane hidden">
+      <section class="panel">
+        <div class="section-header">
+          <div>
+            <span class="eyebrow">📈 กราฟพัฒนาการ</span>
+            <h3>แนวโน้มคะแนนจากการฝึกซ้อม</h3>
+          </div>
+        </div>
+        <div id="history-trend-chart" class="trend-chart-wrap"></div>
+      </section>
+
+      <section class="history panel" aria-label="ประวัติคะแนน">
+        <h3>ประวัติการทำข้อสอบทั้งหมด</h3>
+        <p id="history-hint" class="history-empty hidden">กดที่ชุดใดก็ได้เพื่อเปิดดูข้อสอบ รูปประกอบ คำตอบที่เลือก และคำอธิบายละเอียด</p>
+        <p id="history-empty" class="history-empty">ยังไม่มีประวัติ — ลองทำข้อสอบสักรอบสิ</p>
+        <ul id="history-list" class="history-list hidden"></ul>
+      </section>
+    </div>
 
     <p class="footer-note" id="bank-note">แต่ละชุดถูกสร้างใหม่และเก็บลงฐานข้อมูล ข้อที่เคยออกจะไม่ถูกนำมาใช้อีก</p>
-    <p class="footer-note">ข้อสอบฝึกหัดต้นฉบับ · ไม่ได้คัดลอกจากข้อสอบจริง · ใช้ฝึกวิธีคิดให้พร้อมสอบ</p>
+    <p class="footer-note">ข้อสอบฝึกหัดต้นฉบับระดับสอบเข้า ม.1 · ออกแบบเพื่อสอนวิธีคิดและวิเคราะห์จุดอ่อนรายบุคคล</p>
   </div>
 
-  <!-- EXAM -->
+  <!-- ==================== EXAM / TUTOR SESSION SCREEN ==================== -->
   <div id="screen-exam" class="hidden">
     <div class="exam-bar" role="banner">
       <div class="left">
         <span class="subject-label" id="exam-subject">คณิตศาสตร์</span>
+        <span class="mode-badge" id="exam-mode-badge">โหมดสอบ</span>
         <span class="progress-text" id="exam-progress">ข้อ 1 / 30</span>
       </div>
       <div class="right">
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-toggle-scratch" title="เปิดกระดานทดเลข">📝 กระดานทด</button>
         <button type="button" class="btn btn-ghost btn-sm hidden" id="btn-pause">พักชั่วคราว</button>
         <div class="timer" id="exam-timer" aria-live="polite">40:00</div>
-        <button type="button" class="btn btn-outline" id="btn-quit-exam">ออก</button>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-quit-exam">ออก</button>
       </div>
     </div>
 
     <div class="exam-body">
-      <article class="q-card" id="question-card">
-        <div class="q-meta">
-          <span class="tag" id="q-topic"></span>
-          <span class="tag" id="q-diff"></span>
-        </div>
-        <div id="q-passage" class="passage hidden"></div>
-        <p class="stem" id="q-stem"></p>
-        <div class="choices" id="q-choices" role="listbox" aria-label="ตัวเลือก"></div>
-        <div class="nav-row">
-          <button type="button" class="btn btn-outline" id="btn-prev">← ก่อนหน้า</button>
-          <button type="button" class="btn btn-ghost" id="btn-skip">ข้าม</button>
-          <button type="button" class="btn btn-primary" id="btn-next">ถัดไป →</button>
-        </div>
-      </article>
+      <div class="exam-main-col">
+        <article class="q-card" id="question-card">
+          <div class="q-meta">
+            <div class="q-tags">
+              <span class="tag" id="q-topic"></span>
+              <span class="tag skill-tag" id="q-skill"></span>
+              <span class="tag" id="q-diff"></span>
+            </div>
+            <div class="q-tools">
+              <button type="button" class="tool-btn" id="btn-hint" title="ขอดูคำใบ้ช่วยคิด">💡 คำใบ้</button>
+              <button type="button" class="tool-btn" id="btn-lesson-inline" title="เปิดดูสรุปบทเรียนของเรื่องนี้">📖 บทเรียน</button>
+              <button type="button" class="tool-btn" id="btn-flag" title="ติดธงไว้กลับมาทวน">🚩 ติดธง</button>
+            </div>
+          </div>
+
+          <!-- Hint box (shown when student clicks คำใบ้) -->
+          <div id="q-hint-box" class="hint-banner hidden"></div>
+
+          <!-- Shared reading passage -->
+          <div id="q-passage" class="passage hidden"></div>
+
+          <!-- SVG figure (geometry, charts, number line, etc.) -->
+          <div id="q-figure" class="q-figure hidden"></div>
+
+          <!-- Structured table -->
+          <div id="q-table" class="q-table-wrap hidden"></div>
+
+          <!-- Question stem -->
+          <div class="stem" id="q-stem"></div>
+
+          <!-- 4 choices -->
+          <div class="choices" id="q-choices" role="listbox" aria-label="ตัวเลือก"></div>
+
+          <!-- Instant Tutor Feedback Box (shown in Tutor Mode or when checked) -->
+          <div id="tutor-feedback" class="tutor-feedback hidden"></div>
+
+          <div class="nav-row exam-nav-row">
+            <button type="button" class="btn btn-outline" id="btn-prev">← ก่อนหน้า</button>
+            <button type="button" class="btn btn-ghost" id="btn-skip">ข้ามไปก่อน</button>
+            <button type="button" class="btn btn-outline hidden" id="btn-check-now">✔ ตรวจคำตอบข้อนี้</button>
+            <button type="button" class="btn btn-primary" id="btn-next">ถัดไป →</button>
+          </div>
+        </article>
+
+        <!-- Interactive Scratchpad (toggleable) -->
+        <section id="scratchpad-panel" class="panel scratchpad-panel hidden" aria-label="กระดานทดเลข">
+          <div class="scratch-head">
+            <strong>📝 กระดานทดเลข &amp; วาดรูปช่วยคิด</strong>
+            <div class="scratch-tools">
+              <button type="button" class="chip active" data-pen="ink">✏️ ปากกาดำ</button>
+              <button type="button" class="chip" data-pen="pink">🖍️ ปากกาเน้น</button>
+              <button type="button" class="chip" data-pen="blue">🔵 น้ำเงิน</button>
+              <button type="button" class="btn btn-xs btn-outline" id="btn-scratch-clear">ล้างกระดาน</button>
+            </div>
+          </div>
+          <div class="scratch-body">
+            <canvas id="scratch-canvas" width="680" height="240"></canvas>
+            <textarea id="scratch-notes" class="scratch-notes" placeholder="พิมพ์โน้ตหรือทดสมการตรงนี้ก็ได้..."></textarea>
+          </div>
+        </section>
+      </div>
+
       <aside class="nav-grid-wrap" aria-label="แผนผังข้อสอบ">
         <h4>แผนผังข้อสอบ</h4>
         <div class="q-grid" id="q-grid"></div>
         <div class="legend">
-          <span>■ ตอบแล้ว (ชมพู) · □ ยังไม่ตอบ · ขอบเข้ม = ข้อปัจจุบัน</span>
+          <span>■ ตอบแล้ว · 🚩 ติดธง · ขอบเข้ม = ข้อปัจจุบัน</span>
         </div>
         <div class="submit-wrap">
-          <button type="button" class="btn btn-primary" id="btn-submit" style="width:100%">ส่งคำตอบ</button>
+          <button type="button" class="btn btn-primary" id="btn-submit" style="width:100%">ส่งกระดาษคำตอบ</button>
         </div>
       </aside>
     </div>
   </div>
 
-  <!-- RESULTS -->
+  <!-- ==================== RESULTS & COACHING SCREEN ==================== -->
   <div id="screen-results" class="results hidden">
     <div class="score-hero">
-      <div class="badge">ผลการสอบ</div>
+      <div class="badge" id="result-badge">ผลการสอบและบทวิเคราะห์</div>
       <h2 id="result-title">สรุปคะแนน</h2>
       <div class="big" id="result-percent">0%</div>
       <p id="result-summary"></p>
       <div class="stats">
-        <div class="stat"><div class="label">ถูก</div><div class="value" id="stat-correct">0</div></div>
-        <div class="stat"><div class="label">ผิด</div><div class="value" id="stat-wrong">0</div></div>
+        <div class="stat"><div class="label">ตอบถูก</div><div class="value ok-text" id="stat-correct">0</div></div>
+        <div class="stat"><div class="label">ตอบผิด</div><div class="value bad-text" id="stat-wrong">0</div></div>
         <div class="stat"><div class="label">ไม่ตอบ</div><div class="value" id="stat-blank">0</div></div>
         <div class="stat"><div class="label">เวลาที่ใช้</div><div class="value" id="stat-time">0:00</div></div>
       </div>
       <div class="nav-row" style="justify-content:center;margin-top:18px">
-        <button type="button" class="btn btn-primary" id="btn-home">กลับหน้าแรก</button>
-        <button type="button" class="btn btn-ghost" id="btn-retry">สุ่มชุดใหม่</button>
-        <button type="button" class="btn btn-outline hidden" id="btn-drill">ฝึกหัวข้อที่ควรพัฒนา</button>
+        <button type="button" class="btn btn-primary" id="btn-home">🏠 กลับหน้าหลัก</button>
+        <button type="button" class="btn btn-ghost" id="btn-retry">🔄 ทำชุดใหม่อีกครั้ง</button>
+        <button type="button" class="btn btn-outline hidden" id="btn-drill">🎯 ฝึกซ่อมทักษะที่อ่อนที่สุด</button>
       </div>
     </div>
-    <section class="panel" id="result-topics" aria-label="คะแนนแยกหัวข้อ">
-      <h3>คะแนนแยกหัวข้อ</h3>
-      <div id="topic-bars" class="topic-bars"></div>
-      <p id="improve-note" class="improve-note"></p>
-    </section>
+
+    <div class="results-two-col">
+      <section class="panel" id="result-topics" aria-label="คะแนนแยกหัวข้อ">
+        <h3>คะแนนแยกตามบทเรียน</h3>
+        <div id="topic-bars" class="topic-bars"></div>
+        <p id="improve-note" class="improve-note"></p>
+      </section>
+
+      <section class="panel" id="result-skills-panel" aria-label="วิเคราะห์รายทักษะและสาเหตุที่ผิด">
+        <h3>วิเคราะห์รายทักษะ &amp; บทเรียนแนะนำ</h3>
+        <div id="result-mistakes-summary" class="session-mistakes"></div>
+        <div id="result-skills-list" class="result-skills-list"></div>
+      </section>
+    </div>
+
     <div class="review-head">
-      <h3>ตรวจคำตอบทีละข้อ</h3>
+      <h3>ตรวจคำตอบและวิธีคิดทีละข้อ</h3>
       <div class="topic-row" id="review-filter">
         <button type="button" class="chip active" data-filter="all">ทั้งหมด</button>
-        <button type="button" class="chip" data-filter="bad">เฉพาะข้อที่ผิด</button>
+        <button type="button" class="chip" data-filter="bad">เฉพาะข้อที่ผิด / ไม่ตอบ</button>
+        <button type="button" class="chip" data-filter="flagged">🚩 ข้อที่ติดธง</button>
       </div>
     </div>
-    <p id="review-empty" class="history-empty hidden">ไม่มีข้อที่ผิดในชุดนี้</p>
+    <p id="review-empty" class="history-empty hidden">ไม่มีข้อในหมวดที่เลือก</p>
     <div class="review-list" id="review-list"></div>
+  </div>
+
+  <!-- ==================== INTERACTIVE LESSON MODAL ==================== -->
+  <div id="lesson-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="lesson-title">
+    <div class="modal lesson-modal-card">
+      <div class="lesson-modal-header">
+        <div>
+          <span class="eyebrow" id="lesson-topic-badge">บทเรียน</span>
+          <h3 id="lesson-title">ชื่อทักษะ</h3>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline" id="btn-close-lesson">✕ ปิด</button>
+      </div>
+      <div id="lesson-body" class="lesson-body"></div>
+      <div class="modal-actions lesson-footer">
+        <button type="button" class="btn btn-outline" id="btn-lesson-more-sample">🎲 สุ่มดูโจทย์ตัวอย่างเพิ่ม</button>
+        <button type="button" class="btn btn-primary" id="btn-lesson-start-drill">🧑‍🏫 ฝึกทักษะนี้กับติวเตอร์ (8 ข้อ)</button>
+      </div>
+    </div>
   </div>
 
   <!-- Confirm modal -->
@@ -183,10 +523,11 @@
     </div>
   </div>
 
+  <!-- Busy indicator -->
   <div id="busy" class="modal-backdrop hidden" role="status" aria-live="polite">
     <div class="modal">
       <h3 id="busy-text">กำลังสร้างชุดข้อสอบใหม่</h3>
-      <p>ระบบสุ่มโจทย์ที่ยังไม่เคยใช้ แล้วเก็บลงฐานข้อมูล</p>
+      <p>ระบบกำลังคัดเลือกและสร้างโจทย์ใหม่ที่ไม่ซ้ำกับที่เคยทำ</p>
     </div>
   </div>
 
