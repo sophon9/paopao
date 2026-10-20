@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="ฝึกสอบเข้า ม.1 สวนกุหลาบวิทยาลัย — คณิตศาสตร์และภาษาอังกฤษ" />
-  <title>เตรียมสอบเข้า ม.1 สวนกุหลาบ</title>
+  <meta name="description" content="เตรียมสอบเข้า ม.1 — คณิตศาสตร์และภาษาอังกฤษ" />
+  <title>เตรียมสอบเข้า ม.1</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -14,36 +14,36 @@
   <!-- HOME -->
   <div id="screen-home" class="app-shell">
     <header class="hero">
-      <div class="badge">สวนกุหลาบวิทยาลัย · ฝึกสอบ ม.1</div>
-      <h1>เตรียมสอบเข้า ม.1 สวนกุหลาบ</h1>
-      <p class="subtitle">ฝึกคณิตศาสตร์และภาษาอังกฤษสไตล์ข้อสอบเข้า — สำหรับนักเรียน ป.6</p>
-      <p class="hint">เลือกโหมดด้านล่าง · กด 1–4 เพื่อเลือกคำตอบเมื่ออยู่ในข้อสอบ</p>
+      <div class="badge">ฝึกสอบ ม.1</div>
+      <h1>เตรียมสอบเข้า ม.1</h1>
+      <p class="subtitle">ฝึกคิดคณิตศาสตร์และภาษาอังกฤษให้พร้อมสอบจริง — ทุกชุดเป็นข้อใหม่ที่ยังไม่เคยออก</p>
+      <p class="hint">ระบบสร้างโจทย์แล้วเก็บลงฐานข้อมูลของเครื่องนี้ · ข้อที่เคยใช้จะไม่ถูกนำมาซ้ำ · กด 1–4 เพื่อเลือกคำตอบ</p>
     </header>
 
     <div class="mode-grid" role="list">
       <button type="button" class="mode-card" data-mode="math" role="listitem">
         <div class="icon">ค</div>
         <h2>คณิตศาสตร์</h2>
-        <p>โจทย์หลายขั้นตอน จำนวน เศษส่วน อัตราส่วน สมการ เรขาคณิต สถิติ</p>
-        <div class="meta">30 ข้อ · 40 นาที</div>
+        <p>จำนวน เศษส่วน อัตราส่วน สมการ เรขาคณิต สถิติ — คนละชุดกับครั้งที่แล้ว</p>
+        <div class="meta">30 ข้อ · 40 นาที · ไม่ซ้ำชุดเก่า</div>
       </button>
       <button type="button" class="mode-card" data-mode="english" role="listitem">
         <div class="icon">E</div>
         <h2>ภาษาอังกฤษ</h2>
-        <p>Grammar, Vocabulary, Conversation และ Reading สั้น ๆ</p>
-        <div class="meta">30 ข้อ · 35 นาที</div>
+        <p>Grammar, Vocabulary, Conversation และ Reading คนละบทความกับครั้งที่แล้ว</p>
+        <div class="meta">30 ข้อ · 35 นาที · ไม่ซ้ำชุดเก่า</div>
       </button>
       <button type="button" class="mode-card" data-mode="combined" role="listitem">
         <div class="icon">Σ</div>
         <h2>สอบรวม</h2>
-        <p>คณิตฯ แล้วตามด้วยอังกฤษ — จำลองสนามสอบจริง</p>
-        <div class="meta">60 ข้อ · 75 นาที</div>
+        <p>คณิตฯ แล้วตามด้วยอังกฤษ แบบสนามสอบ แต่เป็นข้อที่ยังไม่เคยทำ</p>
+        <div class="meta">60 ข้อ · 75 นาที · ไม่ซ้ำชุดเก่า</div>
       </button>
       <button type="button" class="mode-card" data-mode="practice" role="listitem" id="btn-show-practice">
         <div class="icon">ฝึก</div>
         <h2>ฝึกทีละบท</h2>
-        <p>เลือกหัวข้อที่ต้องการทบทวน ไม่บังคับจับเวลา</p>
-        <div class="meta">ไม่จำกัดจำนวน · ตัวจับเวลาแบบเลือกได้</div>
+        <p>เลือกหัวข้อที่ยังไม่แม่น ระบบจะให้ข้อใหม่ของบทนั้น</p>
+        <div class="meta">8 ข้อใหม่ · ตัวจับเวลาแบบเลือกได้</div>
       </button>
     </div>
 
@@ -60,13 +60,27 @@
       <button type="button" class="btn btn-primary" id="btn-start-practice">เริ่มฝึก</button>
     </section>
 
+    <section class="panel" id="insight-panel" aria-label="จุดที่ควรฝึกต่อ">
+      <h3>จุดที่ควรฝึกต่อ</h3>
+      <p id="insight-empty" class="history-empty">ยังไม่มีคะแนน — ทำหนึ่งชุดแล้วระบบจะชี้หัวข้อที่ควรกลับไปฝึก</p>
+      <div id="insight-body" class="hidden">
+        <p id="insight-summary" class="insight-summary"></p>
+        <div id="weak-list" class="topic-bars"></div>
+        <div class="nav-row">
+          <button type="button" class="btn btn-primary hidden" id="btn-practice-weak">ฝึกหัวข้อที่อ่อนที่สุด</button>
+        </div>
+      </div>
+    </section>
+
     <section class="history panel" aria-label="ประวัติคะแนน">
-      <h3>ประวัติคะแนนล่าสุด</h3>
+      <h3>ประวัติคะแนน</h3>
+      <p id="history-hint" class="history-empty hidden">กดแต่ละครั้งเพื่อดูว่าข้อไหนถูก ข้อไหนผิด และอ่านคำอธิบายของข้อที่ผิด</p>
       <p id="history-empty" class="history-empty">ยังไม่มีประวัติ — ลองทำข้อสอบสักรอบสิ</p>
       <ul id="history-list" class="history-list hidden"></ul>
     </section>
 
-    <p class="footer-note">ข้อสอบฝึกหัดต้นฉบับ · ไม่คัดลอกจากข้อสอบจริง · สำหรับเตรียมความพร้อมเท่านั้น</p>
+    <p class="footer-note" id="bank-note">แต่ละชุดถูกสร้างใหม่และเก็บลงฐานข้อมูล ข้อที่เคยออกจะไม่ถูกนำมาใช้อีก</p>
+    <p class="footer-note">ข้อสอบฝึกหัดต้นฉบับ · ไม่ได้คัดลอกจากข้อสอบจริง · ใช้ฝึกวิธีคิดให้พร้อมสอบ</p>
   </div>
 
   <!-- EXAM -->
@@ -126,10 +140,23 @@
       </div>
       <div class="nav-row" style="justify-content:center;margin-top:18px">
         <button type="button" class="btn btn-primary" id="btn-home">กลับหน้าแรก</button>
-        <button type="button" class="btn btn-ghost" id="btn-retry">ทำอีกครั้ง</button>
+        <button type="button" class="btn btn-ghost" id="btn-retry">สุ่มชุดใหม่</button>
+        <button type="button" class="btn btn-outline hidden" id="btn-drill">ฝึกหัวข้อที่ควรพัฒนา</button>
       </div>
     </div>
-    <h3 style="margin:0 0 12px">ตรวจคำตอบทีละข้อ</h3>
+    <section class="panel" id="result-topics" aria-label="คะแนนแยกหัวข้อ">
+      <h3>คะแนนแยกหัวข้อ</h3>
+      <div id="topic-bars" class="topic-bars"></div>
+      <p id="improve-note" class="improve-note"></p>
+    </section>
+    <div class="review-head">
+      <h3>ตรวจคำตอบทีละข้อ</h3>
+      <div class="topic-row" id="review-filter">
+        <button type="button" class="chip active" data-filter="all">ทั้งหมด</button>
+        <button type="button" class="chip" data-filter="bad">เฉพาะข้อที่ผิด</button>
+      </div>
+    </div>
+    <p id="review-empty" class="history-empty hidden">ไม่มีข้อที่ผิดในชุดนี้</p>
     <div class="review-list" id="review-list"></div>
   </div>
 
@@ -156,8 +183,13 @@
     </div>
   </div>
 
-  <script src="data/math.js"></script>
-  <script src="data/english.js"></script>
+  <div id="busy" class="modal-backdrop hidden" role="status" aria-live="polite">
+    <div class="modal">
+      <h3 id="busy-text">กำลังสร้างชุดข้อสอบใหม่</h3>
+      <p>ระบบสุ่มโจทย์ที่ยังไม่เคยใช้ แล้วเก็บลงฐานข้อมูล</p>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>

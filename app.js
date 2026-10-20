@@ -1,61 +1,55 @@
-/* Suankularb M.1 Practice App */
+/* Suankularb M.1 practice.
+   Papers come from the local backend. Each question is stored once and
+   is never placed on another paper. */
 (function () {
   "use strict";
 
-  const MATH_TOPICS = [
-    "จำนวนและการดำเนินการ",
-    "ทศนิยมเศษส่วน",
-    "อัตราส่วนร้อยละ",
-    "สมการ",
-    "เรขาคณิตพื้นที่ปริมาตร",
-    "สถิติโจทย์ปัญหา",
-  ];
-
-  const ENG_TOPICS = [
-    "Grammar/Tenses",
-    "Vocabulary",
-    "Conversation",
-    "Reading",
-  ];
-
-  const MODE_CONFIG = {
-    math: { label: "คณิตศาสตร์", count: 30, seconds: 40 * 60, subjects: ["math"] },
-    english: { label: "ภาษาอังกฤษ", count: 30, seconds: 35 * 60, subjects: ["english"] },
-    combined: { label: "สอบรวม", count: 60, seconds: 75 * 60, subjects: ["math", "english"] },
-  };
-
-  const HISTORY_KEY = "sk_m1_history_v1";
   const LETTERS_TH = ["ก", "ข", "ค", "ง"];
   const LETTERS_EN = ["A", "B", "C", "D"];
   const DIFF_TH = { easy: "ง่าย", medium: "ปานกลาง", hard: "ยาก" };
 
-  /** @type {{mode:string, questions:any[], answers:(number|null)[], index:number, remaining:number|null, totalSeconds:number|null, allowPause:boolean, paused:boolean, timerId:number|null, startedAt:number, practiceSubject?:string, practiceTopic?:string}} */
+  let topics = {
+    math: [
+      "จำนวนและการดำเนินการ",
+      "ทศนิยมเศษส่วน",
+      "อัตราส่วนร้อยละ",
+      "สมการ",
+      "เรขาคณิตพื้นที่ปริมาตร",
+      "สถิติโจทย์ปัญหา",
+    ],
+    english: ["Grammar/Tenses", "Vocabulary", "Conversation", "Reading"],
+  };
+
+  /** @type {object|null} */
   let state = null;
+  let loading = false;
+  let practiceSubject = "math";
+  let practiceTopic = topics.math[0];
+  let lastResult = null;
+  let reviewFilter = "all";
+  let viewingHistory = false;
 
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-  function shuffle(arr) {
-    const a = arr.slice();
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  async function api(url, options) {
+    const res = await fetch(url, {
+      headers: { "Content-Type": "application/json" },
+      ...options,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");
     }
-    return a;
-  }
-
-  function pickQuestions(pool, n) {
-    if (pool.length <= n) return shuffle(pool);
-    return shuffle(pool).slice(0, n);
-  }
-
-  function buildExamSet(mode) {
-    const math = window.MATH_QUESTIONS || [];
-    const eng = window.ENGLISH_QUESTIONS || [];
-    if (mode === "math") return pickQuestions(math, 30);
-    if (mode === "english") return pickQuestions(eng, 30);
-    // combined: 30 math then 30 english (sectioned)
-    return pickQuestions(math, 30).concat(pickQuestions(eng, 30));
+    return data;
   }
 
   function formatTime(sec) {
@@ -72,64 +66,144 @@
     });
   }
 
-  function loadHistory() {
-    try {
-      const raw = localStorage.getItem(HISTORY_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
+  function showBusy(text) {
+    $("#busy-text").textContent = text || "กำลังสร้างชุดข้อสอบใหม่";
+    $("#busy").classList.remove("hidden");
   }
 
-  function saveHistory(entry) {
-    const list = loadHistory();
-    list.unshift(entry);
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, 10)));
+  function hideBusy() {
+    $("#busy").classList.add("hidden");
   }
 
-  function renderHistory() {
-    const list = loadHistory();
-    const ul = $("#history-list");
-    const empty = $("#history-empty");
-    if (!list.length) {
-      ul.classList.add("hidden");
-      empty.classList.remove("hidden");
-      return;
-    }
-    empty.classList.add("hidden");
-    ul.classList.remove("hidden");
-    ul.innerHTML = list
-      .map((h) => {
-        const d = new Date(h.at);
-        const dateStr = d.toLocaleString("th-TH", {
-          dateStyle: "medium",
-          timeStyle: "short",
-        });
-        return `<li>
-          <span><strong>${escapeHtml(h.label)}</strong><br/><span style="color:var(--muted);font-size:0.85rem">${escapeHtml(dateStr)}</span></span>
-          <span class="score">${h.percent}% · ${h.correct}/${h.total}</span>
-        </li>`;
+  function renderTopicBars(el, rows) {
+    if (!el) return;
+    el.innerHTML = (rows || [])
+      .map((t) => {
+        const pct = Math.max(0, Math.min(100, Number(t.percent) || 0));
+        return `<div class="topic-bar">
+          <span class="name">${escapeHtml(t.topic)}</span>
+          <span class="score">${t.correct}/${t.total} · ${pct}%</span>
+          <div class="track"><div class="fill" style="width:${pct}%"></div></div>
+        </div>`;
       })
       .join("");
   }
 
-  function escapeHtml(s) {
-    return String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+  function renderHistory(list) {
+    const ul = $("#history-list");
+    const empty = $("#history-empty");
+    const hint = $("#history-hint");
+    if (!list.length) {
+      ul.classList.add("hidden");
+      empty.classList.remove("hidden");
+      if (hint) hint.classList.add("hidden");
+      return;
+    }
+    empty.classList.add("hidden");
+    if (hint) hint.classList.remove("hidden");
+    ul.classList.remove("hidden");
+    ul.innerHTML = list
+      .map((h) => {
+        const dateStr = new Date(h.at).toLocaleString("th-TH", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        });
+        const wrong = Number(h.wrong) || 0;
+        const blank = Number(h.blank) || 0;
+        return `<li>
+          <button type="button" class="history-open" data-paper-id="${h.paperId}">
+            <span><strong>${escapeHtml(h.label)}</strong><br/><span class="history-meta">${escapeHtml(dateStr)} · ผิด ${wrong} · ไม่ตอบ ${blank}</span></span>
+            <span class="score">${h.percent}% · ${h.correct}/${h.total}</span>
+          </button>
+        </li>`;
+      })
+      .join("");
+    ul.querySelectorAll(".history-open").forEach((btn) => {
+      btn.addEventListener("click", () => openHistory(btn.getAttribute("data-paper-id")));
+    });
   }
 
-  /* ---------- Practice panel ---------- */
-  let practiceSubject = "math";
-  let practiceTopic = MATH_TOPICS[0];
+  async function openHistory(paperId) {
+    if (!paperId || loading) return;
+    loading = true;
+    showBusy("กำลังเปิดประวัติ");
+    try {
+      const result = await api("/api/papers/" + paperId);
+      viewingHistory = true;
+      reviewFilter = "all";
+      renderResult(result, { fromHistory: true });
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      loading = false;
+      hideBusy();
+    }
+  }
+
+  function renderInsights(data) {
+    const weak = (data.weak || []).filter((t) => t.total > 0);
+    const empty = $("#insight-empty");
+    const body = $("#insight-body");
+    const note = $("#bank-note");
+    if (note) {
+      if (data.questionsUsed) {
+        note.textContent =
+          "เก็บข้อสอบไว้แล้ว " +
+          data.questionsUsed +
+          " ข้อ จาก " +
+          data.papers +
+          " ชุด · ข้อเหล่านี้จะไม่ถูกนำมาใช้อีก";
+      } else {
+        note.textContent = "แต่ละชุดถูกสร้างใหม่และเก็บลงฐานข้อมูล ข้อที่เคยออกจะไม่ถูกนำมาใช้อีก";
+      }
+    }
+    if (!weak.length) {
+      empty.classList.remove("hidden");
+      body.classList.add("hidden");
+      return;
+    }
+    empty.classList.add("hidden");
+    body.classList.remove("hidden");
+    const worst = weak[0];
+    const below = weak.filter((t) => t.percent < 80).slice(0, 3);
+    $("#insight-summary").textContent = below.length
+      ? "หัวข้อที่ยังต่ำกว่า 80% และควรฝึกก่อนสอบจริง"
+      : "ทุกหัวข้อที่ทำมาอยู่ที่ 80% ขึ้นไป ทำชุดใหม่เพื่อยืนยันกับโจทย์คนละข้อ";
+    renderTopicBars($("#weak-list"), (below.length ? below : weak.slice(0, 4)));
+    const btn = $("#btn-practice-weak");
+    btn.classList.remove("hidden");
+    btn.textContent = "ฝึกหัวข้อที่อ่อนที่สุด: " + worst.topic;
+    btn.dataset.subject = worst.subject;
+    btn.dataset.topic = worst.topic;
+  }
+
+  async function refreshHome() {
+    try {
+      const data = await api("/api/home");
+      if (data.topics) topics = data.topics;
+      if (!topics[practiceSubject].includes(practiceTopic)) {
+        practiceTopic = topics[practiceSubject][0];
+      }
+      renderHistory(data.history || []);
+      renderInsights(data);
+      renderTopicChips();
+    } catch (err) {
+      $("#bank-note").textContent = "ยังติดต่อเซิร์ฟเวอร์ไม่ได้ — เปิดแอปผ่านเซิร์ฟเวอร์ฝึกสอบ";
+      console.error(err);
+    }
+  }
+
+  function syncSubjectChips() {
+    $$("#subject-chips .chip").forEach((c) => {
+      c.classList.toggle("active", c.getAttribute("data-subject") === practiceSubject);
+    });
+  }
 
   function renderTopicChips() {
-    const topics = practiceSubject === "math" ? MATH_TOPICS : ENG_TOPICS;
-    if (!topics.includes(practiceTopic)) practiceTopic = topics[0];
+    const list = topics[practiceSubject] || [];
+    if (!list.includes(practiceTopic)) practiceTopic = list[0];
     const box = $("#topic-chips");
-    box.innerHTML = topics
+    box.innerHTML = list
       .map(
         (t) =>
           `<button type="button" class="chip${t === practiceTopic ? " active" : ""}" data-topic="${escapeHtml(t)}">${escapeHtml(t)}</button>`
@@ -143,49 +217,28 @@
     });
   }
 
-  function startPractice() {
-    const pool =
-      practiceSubject === "math"
-        ? (window.MATH_QUESTIONS || []).filter((q) => q.topic === practiceTopic)
-        : (window.ENGLISH_QUESTIONS || []).filter((q) => q.topic === practiceTopic);
-    if (!pool.length) {
-      alert("ยังไม่มีข้อในหัวข้อนี้");
-      return;
-    }
-    const questions = shuffle(pool);
-    const useTimer = $("#practice-timer-on").checked;
-    const seconds = useTimer ? Math.max(60, Math.round(questions.length * 72)) : null;
-    beginSession({
-      mode: "practice",
-      label: "ฝึก: " + practiceTopic,
-      questions,
-      seconds,
-      allowPause: true,
-      practiceSubject,
-      practiceTopic,
-    });
-  }
-
-  /* ---------- Session ---------- */
-  function beginSession({ mode, label, questions, seconds, allowPause, practiceSubject: ps, practiceTopic: pt }) {
+  function beginSession(paper, extra) {
     clearTimer();
+    const seconds = paper.seconds == null ? null : paper.seconds;
     state = {
-      mode,
-      label: label || (MODE_CONFIG[mode] && MODE_CONFIG[mode].label) || mode,
-      questions,
-      answers: questions.map(() => null),
+      paperId: paper.paperId,
+      mode: paper.mode,
+      label: paper.label,
+      questions: paper.questions,
+      answers: paper.questions.map(() => null),
       index: 0,
       remaining: seconds,
       totalSeconds: seconds,
-      allowPause: !!allowPause,
+      allowPause: !!(extra && extra.allowPause),
       paused: false,
+      submitting: false,
       timerId: null,
       startedAt: Date.now(),
-      practiceSubject: ps,
-      practiceTopic: pt,
+      practiceSubject: paper.subject || (extra && extra.practiceSubject),
+      practiceTopic: paper.topic || (extra && extra.practiceTopic),
     };
     showScreen("screen-exam");
-    $("#btn-pause").classList.toggle("hidden", !allowPause || seconds == null);
+    $("#btn-pause").classList.toggle("hidden", !state.allowPause || seconds == null);
     $("#exam-timer").classList.toggle("hidden", seconds == null);
     if (seconds == null) {
       $("#exam-timer").textContent = "—";
@@ -196,16 +249,60 @@
     renderExam();
   }
 
-  function startExamMode(mode) {
-    const cfg = MODE_CONFIG[mode];
-    const questions = buildExamSet(mode);
-    beginSession({
-      mode,
-      label: cfg.label,
-      questions,
-      seconds: cfg.seconds,
-      allowPause: false,
-    });
+  async function startExamMode(mode) {
+    if (loading) return;
+    loading = true;
+    showBusy("กำลังสร้างชุดข้อสอบใหม่");
+    try {
+      const paper = await api("/api/papers", {
+        method: "POST",
+        body: JSON.stringify({ mode: mode }),
+      });
+      beginSession(paper, { allowPause: false });
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      loading = false;
+      hideBusy();
+    }
+  }
+
+  async function startPractice() {
+    if (loading) return;
+    loading = true;
+    showBusy("กำลังสร้างข้อฝึกของบทนี้");
+    try {
+      const useTimer = $("#practice-timer-on").checked;
+      const paper = await api("/api/papers", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "practice",
+          subject: practiceSubject,
+          topic: practiceTopic,
+          timer: useTimer,
+        }),
+      });
+      beginSession(paper, {
+        allowPause: true,
+        practiceSubject: practiceSubject,
+        practiceTopic: practiceTopic,
+      });
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      loading = false;
+      hideBusy();
+    }
+  }
+
+  function startTopicDrill(subject, topic) {
+    practiceSubject = subject === "english" ? "english" : "math";
+    practiceTopic = topic;
+    syncSubjectChips();
+    renderTopicChips();
+    const panel = $("#practice-panel");
+    if (panel) panel.classList.remove("hidden");
+    startPractice();
   }
 
   function clearTimer() {
@@ -218,7 +315,7 @@
   function startTimer() {
     clearTimer();
     state.timerId = setInterval(() => {
-      if (!state || state.paused) return;
+      if (!state || state.paused || state.submitting) return;
       state.remaining -= 1;
       updateTimerDisplay();
       if (state.remaining <= 0) {
@@ -271,7 +368,6 @@
     }
 
     $("#q-stem").textContent = q.stem;
-
     const letters = lettersFor(q);
     const selected = state.answers[state.index];
     const box = $("#q-choices");
@@ -279,23 +375,20 @@
       .map((c, i) => {
         const sel = selected === i ? " selected" : "";
         return `<button type="button" class="choice${sel}" role="option" aria-selected="${selected === i}" data-index="${i}">
-          <span class="letter">${letters[i]}</span>
+          <span class="letter">${letters[i] || ""}</span>
           <span class="text">${escapeHtml(c)}</span>
         </button>`;
       })
       .join("");
-
     box.querySelectorAll(".choice").forEach((btn) => {
       btn.addEventListener("click", () => {
-        const i = Number(btn.getAttribute("data-index"));
-        state.answers[state.index] = i;
+        state.answers[state.index] = Number(btn.getAttribute("data-index"));
         renderExam();
       });
     });
 
     $("#btn-prev").disabled = state.index === 0;
     $("#btn-next").textContent = state.index === n - 1 ? "ส่งคำตอบ" : "ถัดไป →";
-
     renderGrid();
   }
 
@@ -303,11 +396,7 @@
     const grid = $("#q-grid");
     grid.innerHTML = state.questions
       .map((_, i) => {
-        const classes = [
-          "q-dot",
-          state.answers[i] != null ? "answered" : "",
-          i === state.index ? "current" : "",
-        ]
+        const classes = ["q-dot", state.answers[i] != null ? "answered" : "", i === state.index ? "current" : ""]
           .filter(Boolean)
           .join(" ");
         return `<button type="button" class="${classes}" data-i="${i}" aria-label="ไปข้อ ${i + 1}">${i + 1}</button>`;
@@ -322,6 +411,7 @@
   }
 
   function goNext() {
+    if (!state) return;
     if (state.index >= state.questions.length - 1) {
       askSubmit();
       return;
@@ -331,13 +421,13 @@
   }
 
   function goPrev() {
-    if (state.index <= 0) return;
+    if (!state || state.index <= 0) return;
     state.index -= 1;
     renderExam();
   }
 
   function skip() {
-    // leave unanswered, move next
+    if (!state) return;
     if (state.index < state.questions.length - 1) {
       state.index += 1;
       renderExam();
@@ -358,24 +448,14 @@
     };
   }
 
-  function finishExam(auto) {
+  async function finishExam(auto) {
+    if (!state || state.submitting) return;
+    state.submitting = true;
     clearTimer();
-    if (state) state.paused = false;
+    state.paused = false;
     $("#pause-overlay").classList.add("hidden");
     $("#modal").classList.add("hidden");
 
-    const qs = state.questions;
-    const ans = state.answers;
-    let correct = 0;
-    let wrong = 0;
-    let blank = 0;
-    qs.forEach((q, i) => {
-      if (ans[i] == null) blank += 1;
-      else if (ans[i] === q.answerIndex) correct += 1;
-      else wrong += 1;
-    });
-    const total = qs.length;
-    const percent = total ? Math.round((correct / total) * 100) : 0;
     let usedSec = 0;
     if (state.totalSeconds != null && state.remaining != null) {
       usedSec = Math.max(0, state.totalSeconds - Math.max(0, state.remaining));
@@ -383,79 +463,134 @@
       usedSec = Math.round((Date.now() - state.startedAt) / 1000);
     }
 
-    saveHistory({
-      at: Date.now(),
-      label: state.label + (auto ? " (หมดเวลา)" : ""),
-      mode: state.mode,
-      percent,
-      correct,
-      total,
-      usedSec,
-    });
+    showBusy("กำลังตรวจคำตอบ");
+    let result;
+    try {
+      result = await api("/api/papers/" + state.paperId + "/submit", {
+        method: "POST",
+        body: JSON.stringify({ answers: state.answers, usedSec: usedSec, auto: !!auto }),
+      });
+    } catch (err) {
+      state.submitting = false;
+      hideBusy();
+      alert(err.message);
+      if (state.totalSeconds != null) startTimer();
+      return;
+    }
+    hideBusy();
+    viewingHistory = false;
+    reviewFilter = "all";
+    renderResult(result, { fromHistory: false, auto: auto });
+    refreshHome();
+  }
 
-    $("#result-title").textContent = auto ? "หมดเวลา — สรุปคะแนน" : "สรุปคะแนน";
-    $("#result-percent").textContent = percent + "%";
+  function renderResult(result, options) {
+    const fromHistory = !!(options && options.fromHistory);
+    const auto = !!(options && options.auto);
+    lastResult = result;
+    if (!fromHistory && state) {
+      state.mode = result.mode;
+      state.label = result.label;
+      state.practiceSubject = result.practiceSubject;
+      state.practiceTopic = result.practiceTopic;
+    }
+
+    $("#result-title").textContent = fromHistory
+      ? "ประวัติคะแนน"
+      : auto
+        ? "หมดเวลา — สรุปคะแนน"
+        : "สรุปคะแนน";
+    $("#result-percent").textContent = result.percent + "%";
     $("#result-summary").textContent =
-      "ได้ " + correct + " จาก " + total + " ข้อ · " + state.label;
-    $("#stat-correct").textContent = String(correct);
-    $("#stat-wrong").textContent = String(wrong);
-    $("#stat-blank").textContent = String(blank);
-    $("#stat-time").textContent = formatTime(usedSec);
+      "ได้ " + result.correct + " จาก " + result.total + " ข้อ · " + result.label;
+    $("#stat-correct").textContent = String(result.correct);
+    $("#stat-wrong").textContent = String(result.wrong);
+    $("#stat-blank").textContent = String(result.blank);
+    $("#stat-time").textContent = formatTime(result.usedSec);
 
+    renderTopicBars($("#topic-bars"), result.topics || []);
+    $("#improve-note").textContent = result.improve || "";
+    const worst = (result.topics || []).filter((t) => t.percent < 80)[0];
+    const drill = $("#btn-drill");
+    if (worst) {
+      drill.classList.remove("hidden");
+      drill.textContent = "ฝึกหัวข้อที่ควรพัฒนา: " + worst.topic;
+      drill.dataset.subject = worst.subject;
+      drill.dataset.topic = worst.topic;
+    } else {
+      drill.classList.add("hidden");
+    }
+    $("#btn-retry").classList.toggle("hidden", fromHistory);
+    $$("#review-filter .chip").forEach((chip) => {
+      chip.classList.toggle("active", chip.getAttribute("data-filter") === reviewFilter);
+    });
+    renderReview();
+    showScreen("screen-results");
+    window.scrollTo(0, 0);
+  }
+
+  function renderReview() {
+    const result = lastResult;
     const review = $("#review-list");
-    review.innerHTML = qs
-      .map((q, i) => {
-        const a = ans[i];
-        let klass = "blank";
-        let status = "ไม่ตอบ";
-        if (a != null && a === q.answerIndex) {
-          klass = "ok";
-          status = "ถูก";
-        } else if (a != null) {
-          klass = "bad";
-          status = "ผิด";
-        }
+    const empty = $("#review-empty");
+    if (!result) {
+      review.innerHTML = "";
+      return;
+    }
+    const items = result.questions
+      .map((q, i) => ({ q, i }))
+      .filter(({ q }) => (reviewFilter === "bad" ? q.status !== "ok" : true));
+    if (!items.length) {
+      review.innerHTML = "";
+      empty.classList.remove("hidden");
+      return;
+    }
+    empty.classList.add("hidden");
+    review.innerHTML = items
+      .map(({ q, i }) => {
         const letters = lettersFor(q);
+        const status = q.status === "ok" ? "ถูก" : q.status === "bad" ? "ผิด" : "ไม่ตอบ";
+        const klass = q.status === "ok" ? "ok" : q.status === "bad" ? "bad" : "blank";
         const your =
-          a == null ? "—" : letters[a] + ". " + escapeHtml(q.choices[a]);
-        const right =
-          letters[q.answerIndex] + ". " + escapeHtml(q.choices[q.answerIndex]);
+          q.chosen == null ? "—" : letters[q.chosen] + ". " + escapeHtml(q.choices[q.chosen]);
+        const right = letters[q.answerIndex] + ". " + escapeHtml(q.choices[q.answerIndex]);
         const passageHtml = q.passage
           ? `<div class="passage" style="margin-bottom:8px">${escapeHtml(q.passage)}</div>`
           : "";
+        const explain =
+          q.status === "ok"
+            ? `<div class="explain">${escapeHtml(q.explanation || "")}</div>`
+            : `<div class="mistake"><strong>คำอธิบายข้อที่ผิด</strong>\n${escapeHtml(q.mistakeExplanation || q.explanation || "")}</div>`;
         return `<article class="review-item ${klass}">
-          <div class="status">ข้อ ${i + 1} · ${status}</div>
+          <div class="status">ข้อ ${i + 1} · ${status} · ${escapeHtml(q.topic)}</div>
           ${passageHtml}
           <div class="q-stem">${escapeHtml(q.stem)}</div>
           <div>คำตอบของคุณ: <strong>${your}</strong></div>
           <div>เฉลย: <strong>${right}</strong></div>
-          <div class="explain">${escapeHtml(q.explanation || "")}</div>
+          ${explain}
         </article>`;
       })
       .join("");
-
-    showScreen("screen-results");
-    renderHistory();
   }
 
   function quitExam() {
     $("#modal-title").textContent = "ออกจากการสอบ?";
-    $("#modal-body").textContent = "ความคืบหน้าครั้งนี้จะไม่ถูกบันทึกเป็นคะแนน";
+    $("#modal-body").textContent = "ข้อในชุดนี้ถูกเก็บแล้ว จะไม่ถูกนำมาใช้อีก และครั้งนี้จะไม่บันทึกคะแนน";
     $("#modal").classList.remove("hidden");
     $("#modal-confirm").onclick = () => {
       $("#modal").classList.add("hidden");
       clearTimer();
       state = null;
       showScreen("screen-home");
-      renderHistory();
+      refreshHome();
     };
   }
 
-  /* ---------- Keyboard ---------- */
   function onKey(e) {
-    if (!state) return;
+    if (!state || state.submitting) return;
     if ($("#modal") && !$("#modal").classList.contains("hidden")) return;
     if ($("#pause-overlay") && !$("#pause-overlay").classList.contains("hidden")) return;
+    if ($("#busy") && !$("#busy").classList.contains("hidden")) return;
     if (document.getElementById("screen-exam").classList.contains("hidden")) return;
 
     if (e.key === "ArrowRight") {
@@ -467,18 +602,20 @@
     } else if (["1", "2", "3", "4"].includes(e.key)) {
       e.preventDefault();
       const i = Number(e.key) - 1;
+      const q = state.questions[state.index];
+      if (i >= q.choices.length) return;
       state.answers[state.index] = i;
       renderExam();
     }
   }
 
-  /* ---------- Wire up ---------- */
   function init() {
     $$(".mode-card[data-mode]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const mode = btn.getAttribute("data-mode");
         if (mode === "practice") {
           $("#practice-panel").classList.toggle("hidden");
+          syncSubjectChips();
           renderTopicChips();
           return;
         }
@@ -489,14 +626,17 @@
     $$("#subject-chips .chip").forEach((btn) => {
       btn.addEventListener("click", () => {
         practiceSubject = btn.getAttribute("data-subject");
-        $$("#subject-chips .chip").forEach((c) =>
-          c.classList.toggle("active", c === btn)
-        );
+        syncSubjectChips();
         renderTopicChips();
       });
     });
 
     $("#btn-start-practice").addEventListener("click", startPractice);
+    $("#btn-practice-weak").addEventListener("click", () => {
+      const btn = $("#btn-practice-weak");
+      if (!btn.dataset.topic) return;
+      startTopicDrill(btn.dataset.subject, btn.dataset.topic);
+    });
     $("#btn-prev").addEventListener("click", goPrev);
     $("#btn-next").addEventListener("click", goNext);
     $("#btn-skip").addEventListener("click", skip);
@@ -507,22 +647,39 @@
     });
     $("#btn-home").addEventListener("click", () => {
       state = null;
+      viewingHistory = false;
       showScreen("screen-home");
-      renderHistory();
+      refreshHome();
+    });
+    $$("#review-filter .chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        reviewFilter = chip.getAttribute("data-filter") || "all";
+        $$("#review-filter .chip").forEach((el) => {
+          el.classList.toggle("active", el === chip);
+        });
+        renderReview();
+      });
     });
     $("#btn-retry").addEventListener("click", () => {
       if (!state) {
         showScreen("screen-home");
         return;
       }
-      const m = state.mode;
-      if (m === "practice") {
+      const mode = state.mode;
+      if (mode === "practice") {
         practiceSubject = state.practiceSubject || "math";
-        practiceTopic = state.practiceTopic || MATH_TOPICS[0];
+        practiceTopic = state.practiceTopic || topics.math[0];
+        syncSubjectChips();
+        renderTopicChips();
         startPractice();
       } else {
-        startExamMode(m);
+        startExamMode(mode);
       }
+    });
+    $("#btn-drill").addEventListener("click", () => {
+      const btn = $("#btn-drill");
+      if (!btn.dataset.topic) return;
+      startTopicDrill(btn.dataset.subject, btn.dataset.topic);
     });
 
     $("#btn-pause").addEventListener("click", () => {
@@ -538,7 +695,7 @@
 
     document.addEventListener("keydown", onKey);
     renderTopicChips();
-    renderHistory();
+    refreshHome();
   }
 
   if (document.readyState === "loading") {

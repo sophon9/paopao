@@ -255,16 +255,32 @@ button, input, select { font-family: inherit; }
   gap: 8px;
 }
 
-.history-list li {
+.history-list li { margin: 0; }
+
+.history-list button.history-open {
+  width: 100%;
+  text-align: left;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 12px 14px;
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  font-size: 0.92rem;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.history-list button.history-open:hover {
+  border-color: var(--pink);
+}
+
+.history-list .history-meta {
+  color: var(--muted);
+  font-size: 0.85rem;
 }
 
 .history-list .score {
@@ -589,7 +605,32 @@ button, input, select { font-family: inherit; }
 .stat .label { font-size: 0.8rem; color: var(--muted); }
 .stat .value { font-size: 1.25rem; font-weight: 700; }
 
+.review-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0 0 12px;
+}
+
+.review-head h3 { margin: 0; }
+
 .review-list { display: grid; gap: 12px; }
+
+.review-item .mistake {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: var(--bad-bg);
+  border-radius: 10px;
+  white-space: pre-wrap;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+}
+
+.review-item.blank .mistake { background: var(--blank-bg); }
+
+.review-item .mistake strong { color: var(--ink); }
 
 .review-item {
   background: var(--card);
@@ -632,6 +673,15 @@ button, input, select { font-family: inherit; }
   font-size: 0.82rem;
   margin-top: 36px;
 }
+
+.topic-bars { display: grid; gap: 10px; margin-top: 8px; }
+.topic-bar { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: baseline; }
+.topic-bar .name { font-weight: 600; }
+.topic-bar .score { color: var(--muted); font-size: 0.88rem; }
+.topic-bar .track { grid-column: 1 / -1; height: 8px; background: var(--pink-soft); border-radius: 99px; overflow: hidden; }
+.topic-bar .fill { height: 100%; background: var(--pink); border-radius: 99px; }
+.insight-summary, .improve-note { color: var(--ink-soft); margin: 0 0 8px; }
+.improve-note { margin-top: 12px; }
 
 .sr-only {
   position: absolute;
